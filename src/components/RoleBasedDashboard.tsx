@@ -8,9 +8,17 @@ interface RoleBasedDashboardProps {
     preferences?: any;
     sellerData?: any;
   };
+  onBrowseBooks?: () => void;
+  onListBook?: () => void;
+  onFindExchanges?: () => void;
 }
 
-export const RoleBasedDashboard: React.FC<RoleBasedDashboardProps> = ({ user }) => {
+export const RoleBasedDashboard: React.FC<RoleBasedDashboardProps> = ({ 
+  user, 
+  onBrowseBooks,
+  onListBook,
+  onFindExchanges 
+}) => {
   if (user.role === 'buyer') {
     return (
       <div className="card">
@@ -44,7 +52,10 @@ export const RoleBasedDashboard: React.FC<RoleBasedDashboardProps> = ({ user }) 
               <p className="text-sm text-blue-700">
                 New Grade {user.preferences.childGrades[0]} books available in {user.location}
               </p>
-              <button className="text-xs text-blue-600 hover:text-blue-700 mt-1">
+              <button 
+                onClick={onBrowseBooks}
+                className="text-xs text-blue-600 hover:text-blue-700 mt-1"
+              >
                 View recommendations →
               </button>
             </div>
@@ -52,10 +63,16 @@ export const RoleBasedDashboard: React.FC<RoleBasedDashboardProps> = ({ user }) 
 
           {/* Quick Actions */}
           <div className="space-y-2">
-            <button className="w-full btn-primary text-sm py-2">
+            <button 
+              onClick={onBrowseBooks}
+              className="w-full btn-primary text-sm py-2"
+            >
               Browse Books
             </button>
-            <button className="w-full btn-secondary text-sm py-2 flex items-center justify-center space-x-2">
+            <button 
+              onClick={onFindExchanges}
+              className="w-full btn-secondary text-sm py-2 flex items-center justify-center space-x-2"
+            >
               <ArrowRightLeft className="h-4 w-4" />
               <span>Find Exchange Matches</span>
             </button>
@@ -111,7 +128,10 @@ export const RoleBasedDashboard: React.FC<RoleBasedDashboardProps> = ({ user }) 
 
           {/* Quick Actions */}
           <div className="space-y-2">
-            <button className="w-full btn-primary text-sm py-2 flex items-center justify-center space-x-2">
+            <button 
+              onClick={onListBook}
+              className="w-full btn-primary text-sm py-2 flex items-center justify-center space-x-2"
+            >
               <Plus className="h-4 w-4" />
               <span>List a New Book</span>
             </button>
@@ -148,14 +168,23 @@ export const RoleBasedDashboard: React.FC<RoleBasedDashboardProps> = ({ user }) 
     <div className="card">
       <h3 className="font-poppins font-semibold text-primary-700 mb-4">Quick Actions</h3>
       <div className="space-y-3">
-        <button className="w-full btn-primary">
+        <button 
+          onClick={onListBook}
+          className="w-full btn-primary"
+        >
           List a Book
         </button>
-        <button className="w-full btn-secondary flex items-center justify-center space-x-2">
+        <button 
+          onClick={onFindExchanges}
+          className="w-full btn-secondary flex items-center justify-center space-x-2"
+        >
           <ArrowRightLeft className="h-4 w-4" />
           <span>Find Exchange Matches</span>
         </button>
-        <button className="w-full btn-secondary">
+        <button 
+          onClick={onBrowseBooks}
+          className="w-full btn-secondary"
+        >
           Browse Books
         </button>
       </div>

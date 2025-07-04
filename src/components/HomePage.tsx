@@ -55,6 +55,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onSearch, onBookClick, curre
   };
 
   const handleBrowseBooksClick = () => {
+    // Trigger search with empty query to show all books
     onSearch?.('', {});
   };
 

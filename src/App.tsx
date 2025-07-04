@@ -17,11 +17,8 @@ export function App() {
   const handleSearch = (query: string, filters: SearchFilters) => {
     setSearchQuery(query);
     setSearchFilters(filters);
-    if (query.trim() || Object.keys(filters).length > 0) {
-      setCurrentView('search');
-    } else {
-      setCurrentView('home');
-    }
+    // Always navigate to search view when search is triggered
+    setCurrentView('search');
   };
 
   const handleBookClick = (book: Book) => {
