@@ -3,12 +3,13 @@ import { Header } from './components/Header';
 import { HomePage } from './components/HomePage';
 import { SearchResultsPage } from './components/SearchResultsPage';
 import { BookDetailPage } from './components/BookDetailPage';
+import { ListingDashboardPage } from './components/ListingDashboardPage';
 import { Footer } from './components/Footer';
 import { SearchFilters } from './components/SearchBar';
 import { Book } from './types';
 
 export function App() {
-  const [currentView, setCurrentView] = useState<'home' | 'search' | 'bookDetail'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'search' | 'bookDetail' | 'dashboard'>('home');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
@@ -38,8 +39,20 @@ export function App() {
     setSelectedBook(null);
   };
 
+  const handleBackToDashboard = () => {
+    setCurrentView('dashboard');
+    setSelectedBook(null);
+  };
+
   const handleAuthSuccess = (user: any) => {
     setCurrentUser(user);
+    // Navigate to dashboard after successful login/registration
+    setCurrentView('dashboard');
+  };
+
+  const handleListBookClick = () => {
+    // This would open the ListBookModal
+    console.log('List book clicked');
   };
 
   // Render book detail page
@@ -55,7 +68,7 @@ export function App() {
         <main className="flex-1">
           <BookDetailPage 
             book={selectedBook}
-            onBack={searchQuery || Object.keys(searchFilters).length > 0 ? handleBackToSearch : handleBackToHome}
+            onBack={currentUser ? handleBackToDashboard : (searchQuery || Object.keys(searchFilters).length > 0 ? handleBackToSearch : handleBackToHome)}
             onSwapClick={(book) => console.log('Swap clicked for book:', book)}
           />
         </main>
@@ -79,7 +92,24 @@ export function App() {
             initialQuery={searchQuery}
             initialFilters={searchFilters}
             onBookClick={handleBookClick}
-            onBack={handleBackToHome}
+            onBack={currentUser ? handleBackToDashboard : handleBackToHome}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Render dashboard page for logged-in users
+  if (currentView === 'dashboard' && currentUser) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex flex-col">
+        <main className="flex-1">
+          <ListingDashboardPage
+            currentUser={currentUser}
+            onBookClick={handleBookClick}
+            onListBookClick={handleListBookClick}
+            onSearch={handleSearch}
           />
         </main>
         <Footer />

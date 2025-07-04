@@ -243,7 +243,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onSearch, onBookClick, curre
           {currentUser && (
             <div className="space-y-6">
               {/* Role-Based Dashboard */}
-              <RoleBasedDashboard user={currentUser} />
+              <RoleBasedDashboard 
+                user={currentUser}
+                onBrowseBooks={handleBrowseBooksClick}
+                onListBook={handleListBookClick}
+                onFindExchanges={() => console.log('Find exchanges clicked')}
+              />
               
               {/* Pending Exchanges - Only for signed-in users */}
               {pendingExchanges.length > 0 && (
