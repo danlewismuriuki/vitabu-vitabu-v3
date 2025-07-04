@@ -138,17 +138,10 @@ export const ListBookModal: React.FC<ListBookModalProps> = ({
   };
 
   const handleExchangeWishlistChange = (books: string[]) => {
-    // Check for duplicates
-    const newBooks = books.filter(book => !bookData.exchangeWishlist.includes(book));
-    const duplicates = books.filter(book => bookData.exchangeWishlist.includes(book));
-    
-    if (duplicates.length > 0) {
-      setDuplicateBookError(`You've already added "${duplicates[0]}" to your wishlist.`);
-      setTimeout(() => setDuplicateBookError(''), 3000);
-      return;
-    }
-    
+    // Clear any existing error first
     setDuplicateBookError('');
+    
+    // Simply update the wishlist - the SmartBookInput component handles duplicate checking
     handleInputChange('exchangeWishlist', books);
   };
 
