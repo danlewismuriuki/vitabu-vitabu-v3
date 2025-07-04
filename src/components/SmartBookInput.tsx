@@ -22,6 +22,7 @@ export const SmartBookInput: React.FC<SmartBookInputProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [showQuickPicks, setShowQuickPicks] = useState(false);
+  const [duplicateError, setDuplicateError] = useState('');
   
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -52,6 +53,10 @@ export const SmartBookInput: React.FC<SmartBookInputProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
+    // Clear duplicate error when user starts typing
+    if (duplicateError) {
+      setDuplicateError('');
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -84,16 +89,30 @@ export const SmartBookInput: React.FC<SmartBookInputProps> = ({
   };
 
   const selectBook = (bookTitle: string) => {
-    // Check for duplicates
-    if (value.includes(bookTitle)) {
-      return; // Don't add duplicates - parent component will handle error display
+    // Clear any existing duplicate error
+    setDuplicateError('');
+    
+    // Check for duplicates - case insensitive comparison
+    const isDuplicate = value.some(existingBook => 
+      existingBook.toLowerCase().trim() === bookTitle.toLowerCase().trim()
+    );
+    
+    if (isDuplicate) {
+      setDuplicateError(`"${bookTitle}" is already in your wishlist.`);
+      setTimeout(() => setDuplicateError(''), 3000);
+      return;
     }
     
     if (value.length >= maxSelections) {
-      return; // Max selections reached
+      setDuplicateError(`Maximum ${maxSelections} books allowed.`);
+      setTimeout(() => setDuplicateError(''), 3000);
+      return;
     }
 
-    onChange([...value, bookTitle]);
+    // Add the book to the list
+    const newBooks = [...value, bookTitle];
+    onChange(newBooks);
+    
     setInputValue('');
     setShowSuggestions(false);
     setSelectedIndex(-1);
@@ -101,7 +120,9 @@ export const SmartBookInput: React.FC<SmartBookInputProps> = ({
   };
 
   const removeBook = (bookTitle: string) => {
-    onChange(value.filter(book => book !== bookTitle));
+    const newBooks = value.filter(book => book !== bookTitle);
+    onChange(newBooks);
+    setDuplicateError(''); // Clear any error when removing books
   };
 
   const groupSuggestionsBySubject = (books: CBCBook[]) => {
@@ -117,18 +138,27 @@ export const SmartBookInput: React.FC<SmartBookInputProps> = ({
 
   const getQuickSuggestions = () => {
     return mostRequestedBooks
-      .filter(book => !value.includes(book))
+      .filter(book => !value.some(existingBook => 
+        existingBook.toLowerCase().trim() === book.toLowerCase().trim()
+      ))
       .slice(0, 6);
   };
 
   return (
     <div ref={containerRef} className="relative">
+      {/* Error Message */}
+      {duplicateError && (
+        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">{duplicateError}</p>
+        </div>
+      )}
+
       {/* Selected Books (Chips) */}
       {value.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
           {value.map((book, index) => (
             <div
-              key={index}
+              key={`${book}-${index}`} // Use book title + index to ensure uniqueness
               className="inline-flex items-center space-x-2 bg-secondary-100 text-secondary-700 px-3 py-1 rounded-full text-sm"
             >
               <span>{book}</span>
@@ -192,7 +222,9 @@ export const SmartBookInput: React.FC<SmartBookInputProps> = ({
               </div>
               {books.map((book, index) => {
                 const globalIndex = suggestions.findIndex(s => s.code === book.code);
-                const isAlreadySelected = value.includes(book.title);
+                const isAlreadySelected = value.some(existingBook => 
+                  existingBook.toLowerCase().trim() === book.title.toLowerCase().trim()
+                );
                 return (
                   <button
                     key={book.code}
@@ -245,7 +277,9 @@ export const SmartBookInput: React.FC<SmartBookInputProps> = ({
           <div className="p-3">
             <div className="grid grid-cols-1 gap-2">
               {getQuickSuggestions().map((book) => {
-                const isAlreadySelected = value.includes(book);
+                const isAlreadySelected = value.some(existingBook => 
+                  existingBook.toLowerCase().trim() === book.toLowerCase().trim()
+                );
                 return (
                   <button
                     key={book}
