@@ -63,7 +63,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({
     }
   }, [isOpen]);
 
-  // Real-time validation
+  // Real-time validation - removed error clearing logic to prevent infinite loop
   useEffect(() => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^(\+254|0)[17]\d{8}$/;
@@ -82,23 +82,17 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({
       number: /\d/.test(formData.password),
       special: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password)
     });
-
-    // Clear errors when user starts typing
-    if (errors.emailOrPhone && formData.emailOrPhone) {
-      setErrors(prev => ({ ...prev, emailOrPhone: '' }));
-    }
-    if (errors.password && formData.password) {
-      setErrors(prev => ({ ...prev, password: '' }));
-    }
-    if (errors.username && formData.username) {
-      setErrors(prev => ({ ...prev, username: '' }));
-    }
-  }, [formData, errors]);
+  }, [formData]); // Only depend on formData, not errors
 
   if (!isOpen) return null;
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear errors when user starts typing - moved here to prevent infinite loop
+    if (errors[field] && value) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
 
   const validateForm = () => {
