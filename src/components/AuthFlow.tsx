@@ -156,7 +156,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({
     localStorage.setItem('vitabu_saved_usernames', JSON.stringify(updated));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) return;
@@ -166,38 +166,47 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    if (mode === 'login') {
-      // Save username if remember me is checked
-      if (rememberMe) {
-        saveUsername(formData.emailOrPhone);
-      }
-
-      // Mock successful login
-      const user = {
-        id: Date.now().toString(),
-        name: 'Mary Wanjiku',
-        email: formData.emailOrPhone.includes('@') ? formData.emailOrPhone : 'user@example.com',
-        phone: formData.emailOrPhone.includes('@') ? '+254712345678' : formData.emailOrPhone,
-        role: 'buyer',
-        location: 'Nairobi',
-        profilePicture: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?w=100'
-      };
-
-      // Generate token with TTL based on remember me
-      const tokenTTL = rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000; // 7 days or 24 hours
-      const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      localStorage.setItem('vitabu_auth_token', token);
-      localStorage.setItem('vitabu_token_expiry', (Date.now() + tokenTTL).toString());
-      localStorage.setItem('vitabu_user', JSON.stringify(user));
-
-      onAuthSuccess(user);
-      onClose();
-    } else {
-      // For signup, show welcome screen first
-      setMode('welcome');
+    // Save username if remember me is checked
+    if (rememberMe) {
+      saveUsername(formData.emailOrPhone);
     }
 
+    // Mock successful login
+    const user = {
+      id: Date.now().toString(),
+      name: 'Mary Wanjiku',
+      email: formData.emailOrPhone.includes('@') ? formData.emailOrPhone : 'user@example.com',
+      phone: formData.emailOrPhone.includes('@') ? '+254712345678' : formData.emailOrPhone,
+      role: 'buyer',
+      location: 'Nairobi',
+      profilePicture: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?w=100'
+    };
+
+    // Generate token with TTL based on remember me
+    const tokenTTL = rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000; // 7 days or 24 hours
+    const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    localStorage.setItem('vitabu_auth_token', token);
+    localStorage.setItem('vitabu_token_expiry', (Date.now() + tokenTTL).toString());
+    localStorage.setItem('vitabu_user', JSON.stringify(user));
+
+    onAuthSuccess(user);
+    onClose();
+    setIsLoading(false);
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // For signup, show welcome screen first
+    setMode('welcome');
     setIsLoading(false);
   };
 
@@ -440,7 +449,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form className="space-y-4">
         {/* Username (Signup only) */}
         {mode === 'signup' && (
           <div>
@@ -640,21 +649,42 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({
           </div>
         )}
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isLoading || !isFormValid}
-          className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span>{mode === 'login' ? 'Signing In...' : 'Creating Account...'}</span>
-            </>
+        {/* Submit Buttons - Separate for Login and Signup */}
+        <div className="space-y-3">
+          {mode === 'login' ? (
+            <button
+              type="submit"
+              onClick={handleLogin}
+              disabled={isLoading || !isFormValid}
+              className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Logging In...</span>
+                </>
+              ) : (
+                <span>Log In</span>
+              )}
+            </button>
           ) : (
-            <span>{mode === 'login' ? 'Sign In' : 'Create Account'}</span>
+            <button
+              type="submit"
+              onClick={handleSignup}
+              disabled={isLoading || !isFormValid}
+              className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Creating Account...</span>
+                </>
+              ) : (
+                <span>Sign Up</span>
+              )}
+            </button>
           )}
-        </button>
+        </div>
       </form>
 
       {/* Footer */}
