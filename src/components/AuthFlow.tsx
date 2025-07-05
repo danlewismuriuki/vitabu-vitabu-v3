@@ -88,6 +88,28 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({
     });
   }, [formData]); // Only depend on formData, not errors
 
+  // Computed form validity - prevents calling validateForm() during render
+  const isFormValid = React.useMemo(() => {
+    if (!formData.emailOrPhone || !formData.password) {
+      return false;
+    }
+    
+    if (!validation.email) {
+      return false;
+    }
+
+    if (mode === 'signup') {
+      if (!formData.username || !validation.username) {
+        return false;
+      }
+      if (!validation.password) {
+        return false;
+      }
+    }
+
+    return true;
+  }, [mode, formData, validation]);
+
   if (!isOpen) return null;
 
   const handleInputChange = (field: string, value: string) => {
@@ -621,7 +643,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isLoading || !validateForm()}
+          disabled={isLoading || !isFormValid}
           className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
         >
           {isLoading ? (
