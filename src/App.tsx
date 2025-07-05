@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { HomePage } from './components/HomePage';
 import { SearchResultsPage } from './components/SearchResultsPage';
@@ -7,6 +7,7 @@ import { ListingDashboardPage } from './components/ListingDashboardPage';
 import { Footer } from './components/Footer';
 import { SearchFilters } from './components/SearchBar';
 import { Book } from './types';
+import { getCurrentUser, isTokenValid, refreshTokenIfNeeded } from './utils/auth';
 
 export function App() {
   const [currentView, setCurrentView] = useState<'home' | 'search' | 'bookDetail' | 'dashboard'>('home');
@@ -14,6 +15,28 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Check for existing authentication on app load
+  useEffect(() => {
+    if (isTokenValid()) {
+      const user = getCurrentUser();
+      if (user) {
+        setCurrentUser(user);
+        refreshTokenIfNeeded();
+      }
+    }
+  }, []);
+
+  // Auto-refresh token periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (currentUser && isTokenValid()) {
+        refreshTokenIfNeeded();
+      }
+    }, 5 * 60 * 1000); // Check every 5 minutes
+
+    return () => clearInterval(interval);
+  }, [currentUser]);
 
   const handleSearch = (query: string, filters: SearchFilters) => {
     setSearchQuery(query);
@@ -50,6 +73,14 @@ export function App() {
     setCurrentView('dashboard');
   };
 
+  const handleUserChange = (user: any) => {
+    setCurrentUser(user);
+    if (!user) {
+      // User logged out, go back to home
+      setCurrentView('home');
+    }
+  };
+
   const handleListBookClick = () => {
     // This would open the ListBookModal
     console.log('List book clicked');
@@ -64,6 +95,7 @@ export function App() {
           onSearch={handleSearch}
           onBookSelect={handleBookClick}
           onAuthSuccess={handleAuthSuccess}
+          onUserChange={handleUserChange}
         />
         <main className="flex-1">
           <BookDetailPage 
@@ -86,6 +118,7 @@ export function App() {
           onSearch={handleSearch}
           onBookSelect={handleBookClick}
           onAuthSuccess={handleAuthSuccess}
+          onUserChange={handleUserChange}
         />
         <main className="flex-1">
           <SearchResultsPage 
@@ -125,6 +158,7 @@ export function App() {
         onSearch={handleSearch}
         onBookSelect={handleBookClick}
         onAuthSuccess={handleAuthSuccess}
+        onUserChange={handleUserChange}
       />
       <main className="flex-1">
         <HomePage 

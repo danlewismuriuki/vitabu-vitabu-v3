@@ -1,23 +1,44 @@
-import React, { useState } from 'react';
-import { Bell, User, BookOpen, Menu } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bell, BookOpen, Menu } from 'lucide-react';
 import { SearchBar, SearchFilters } from './SearchBar';
-import { AuthModal } from './AuthModal';
+import { AuthFlow } from './AuthFlow';
+import { AuthButton } from './AuthButton';
 import { Book } from '../types';
+import { getCurrentUser, isTokenValid } from '../utils/auth';
 
 interface HeaderProps {
   currentUser?: any;
   onSearch?: (query: string, filters: SearchFilters) => void;
   onBookSelect?: (book: Book) => void;
   onAuthSuccess?: (user: any) => void;
+  onUserChange?: (user: any) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
   currentUser, 
   onSearch, 
   onBookSelect,
-  onAuthSuccess 
+  onAuthSuccess,
+  onUserChange
 }) => {
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showAuthFlow, setShowAuthFlow] = useState(false);
+  const [user, setUser] = useState(currentUser);
+
+  // Check for existing auth on mount
+  useEffect(() => {
+    if (!user && isTokenValid()) {
+      const existingUser = getCurrentUser();
+      if (existingUser) {
+        setUser(existingUser);
+        onUserChange?.(existingUser);
+      }
+    }
+  }, [user, onUserChange]);
+
+  // Update user when prop changes
+  useEffect(() => {
+    setUser(currentUser);
+  }, [currentUser]);
 
   const handleSearch = (query: string, filters: SearchFilters) => {
     console.log('Header search query:', query, 'Filters:', filters);
@@ -30,9 +51,16 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const handleAuthSuccess = (newUser: any) => {
+    setUser(newUser);
     onAuthSuccess?.(newUser);
-    setShowAuthModal(false);
+    onUserChange?.(newUser);
+    setShowAuthFlow(false);
     console.log('User authenticated:', newUser);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    onUserChange?.(null);
   };
 
   return (
@@ -72,44 +100,19 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
 
               {/* Notifications */}
-              {currentUser && (
+              {user && (
                 <button className="relative p-2 rounded-full text-neutral-600 hover:text-primary-700 hover:bg-neutral-100">
                   <Bell className="h-6 w-6" />
                   <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-accent-500"></span>
                 </button>
               )}
 
-              {/* User Profile */}
-              <div className="flex items-center space-x-3">
-                {currentUser ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="hidden sm:block text-right">
-                      <p className="text-sm font-medium text-primary-700">{currentUser.name}</p>
-                      <p className="text-xs text-neutral-500">
-                        {currentUser.role === 'seller' ? 'Seller' : currentUser.role === 'buyer' ? 'Buyer' : 'Member'}
-                      </p>
-                    </div>
-                    <div className="h-8 w-8 rounded-full bg-accent-100 flex items-center justify-center overflow-hidden">
-                      {currentUser.profilePicture ? (
-                        <img 
-                          src={currentUser.profilePicture} 
-                          alt={currentUser.name}
-                          className="h-8 w-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <User className="h-5 w-5 text-accent-600" />
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <button 
-                    onClick={() => setShowAuthModal(true)}
-                    className="btn-primary text-sm"
-                  >
-                    Sign In
-                  </button>
-                )}
-              </div>
+              {/* Auth Button */}
+              <AuthButton
+                currentUser={user}
+                onAuthClick={() => setShowAuthFlow(true)}
+                onLogout={handleLogout}
+              />
             </div>
           </div>
 
@@ -126,10 +129,10 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
 
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
+      {/* Auth Flow Modal */}
+      <AuthFlow
+        isOpen={showAuthFlow}
+        onClose={() => setShowAuthFlow(false)}
         onAuthSuccess={handleAuthSuccess}
       />
     </>
