@@ -53,15 +53,19 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({
   const [savedUsernames, setSavedUsernames] = useState<string[]>([]);
   const [showUsernameDropdown, setShowUsernameDropdown] = useState(false);
 
-  // Load saved usernames on mount
+  // Load saved usernames on mount - fixed to prevent infinite re-renders
   useEffect(() => {
     if (isOpen) {
       const saved = localStorage.getItem('vitabu_saved_usernames');
       if (saved) {
-        setSavedUsernames(JSON.parse(saved));
+        const parsedUsernames = JSON.parse(saved);
+        // Only update state if the content is actually different
+        if (JSON.stringify(parsedUsernames) !== JSON.stringify(savedUsernames)) {
+          setSavedUsernames(parsedUsernames);
+        }
       }
     }
-  }, [isOpen]);
+  }, [isOpen]); // Removed savedUsernames from dependencies to prevent infinite loop
 
   // Real-time validation - removed error clearing logic to prevent infinite loop
   useEffect(() => {
