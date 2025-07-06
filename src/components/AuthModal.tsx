@@ -1,186 +1,206 @@
 import React, { useState } from 'react';
-import { X, Facebook, Phone, Mail, MapPin, Loader2, ShoppingBag, Store, BookOpen, Camera, DollarSign } from 'lucide-react';
+import { X, Facebook, Phone, Mail, MapPin, Loader2, ShoppingBag, Store, BookOpen, Camera, DollarSign, Chrome, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAuthSuccess: (user: any) => void;
+  initialMode?: 'login' | 'signup';
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess }) => {
-  const [authStep, setAuthStep] = useState<'role-selection' | 'signup' | 'phone-verify' | 'preferences' | 'seller-setup'>('role-selection');
-  const [userRole, setUserRole] = useState<'buyer' | 'seller' | null>(null);
-  const [signupMethod, setSignupMethod] = useState<'facebook' | 'phone' | 'email' | null>(null);
+export const AuthModal: React.FC<AuthModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onAuthSuccess,
+  initialMode = 'login'
+}) => {
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>(initialMode);
+  const [signupStep, setSignupStep] = useState<'initial' | 'form' | 'verification'>('initial');
+  const [signupMethod, setSignupMethod] = useState<'email' | 'phone' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    otp: '',
+    username: '',
+    emailOrPhone: '',
     password: '',
-    confirmPassword: ''
+    otp: ''
   });
-  const [preferences, setPreferences] = useState({
-    childGrades: [] as number[],
-    subjects: [] as string[],
-    location: { county: '', area: '', landmark: '' },
-    notifications: {
-      priceDrops: true,
-      newListings: true,
-      swapMatches: true
-    }
-  });
-  const [sellerData, setSellerData] = useState({
-    bio: '',
-    deliveryMethods: [] as string[],
-    estimatedEarnings: 0
-  });
-  const [locationError, setLocationError] = useState('');
+
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   if (!isOpen) return null;
 
-  const kenyanCounties = [
-    'Nairobi', 'Mombasa', 'Kiambu', 'Nakuru', 'Machakos', 'Kajiado', 'Murang\'a',
-    'Kisumu', 'Uasin Gishu', 'Meru', 'Nyeri', 'Laikipia', 'Embu', 'Kakamega'
-  ];
-
-  const subjects = [
-    'Mathematics', 'English', 'Kiswahili', 'Science', 'Social Studies', 
-    'Religious Education', 'Creative Arts', 'Physical Education'
-  ];
-
-  const deliveryOptions = [
-    'Meet in person', 'Home delivery', 'School pickup', 'Public meetup spots'
-  ];
-
-  const handleRoleSelection = (role: 'buyer' | 'seller') => {
-    setUserRole(role);
-    setAuthStep('signup');
+  // Helper functions
+  const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
+  const isValidPhone = (value: string) => /^\+?254[0-9]{9}$|^0[0-9]{9}$/.test(value);
+  const getInputType = (value: string) => {
+    if (isValidEmail(value)) return 'email';
+    if (value.startsWith('+254') || value.startsWith('07') || value.startsWith('01')) return 'phone';
+    return 'text';
   };
 
-  const handleFacebookSignup = async () => {
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear errors when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    if (authMode === 'login') {
+      if (!formData.emailOrPhone) {
+        newErrors.emailOrPhone = 'Email or phone number is required';
+      } else if (!isValidEmail(formData.emailOrPhone) && !isValidPhone(formData.emailOrPhone)) {
+        newErrors.emailOrPhone = 'Please enter a valid email or phone number';
+      }
+      if (!formData.password) {
+        newErrors.password = 'Password is required';
+      }
+    } else if (authMode === 'signup' && signupStep === 'form') {
+      if (!formData.username || formData.username.length < 3) {
+        newErrors.username = 'Username must be at least 3 characters';
+      }
+      if (!formData.emailOrPhone) {
+        newErrors.emailOrPhone = 'Email or phone number is required';
+      } else if (!isValidEmail(formData.emailOrPhone) && !isValidPhone(formData.emailOrPhone)) {
+        newErrors.emailOrPhone = 'Please enter a valid email or phone number';
+      }
+      if (!formData.password || formData.password.length < 6) {
+        newErrors.password = 'Password must be at least 6 characters';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
     setIsLoading(true);
-    setSignupMethod('facebook');
     
-    // Simulate Facebook OAuth flow
+    // Simulate API call
     setTimeout(() => {
-      const mockFacebookUser = {
-        id: 'fb_123',
-        name: 'Mary Wanjiku',
-        email: 'mary@facebook.com',
-        profilePicture: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?w=100',
-        signupMethod: 'facebook'
+      const mockUser = {
+        id: 'user_123',
+        name: 'John Doe',
+        email: formData.emailOrPhone,
+        role: 'buyer',
+        location: 'Nairobi'
       };
-      setFormData(prev => ({ ...prev, name: mockFacebookUser.name, email: mockFacebookUser.email }));
-      setAuthStep(userRole === 'seller' ? 'seller-setup' : 'preferences');
+
+      // Store auth data
+      const expiryTime = rememberMe 
+        ? Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days
+        : Date.now() + (24 * 60 * 60 * 1000); // 1 day
+
+      localStorage.setItem('vitabu_auth_token', 'mock_token_123');
+      localStorage.setItem('vitabu_token_expiry', expiryTime.toString());
+      localStorage.setItem('vitabu_user', JSON.stringify(mockUser));
+
+      onAuthSuccess(mockUser);
       setIsLoading(false);
+      onClose();
+    }, 1500);
+  };
+
+  const handleSocialLogin = async (provider: 'google' | 'facebook') => {
+    setIsLoading(true);
+    
+    // Simulate social login
+    setTimeout(() => {
+      const mockUser = {
+        id: `${provider}_123`,
+        name: provider === 'google' ? 'Jane Smith' : 'Mary Wanjiku',
+        email: `user@${provider}.com`,
+        role: 'buyer',
+        location: 'Nairobi',
+        profilePicture: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?w=100'
+      };
+
+      const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
+      localStorage.setItem('vitabu_auth_token', `${provider}_token_123`);
+      localStorage.setItem('vitabu_token_expiry', expiryTime.toString());
+      localStorage.setItem('vitabu_user', JSON.stringify(mockUser));
+
+      onAuthSuccess(mockUser);
+      setIsLoading(false);
+      onClose();
     }, 2000);
   };
 
-  const handlePhoneSignup = async () => {
-    if (!formData.phone || !formData.name) {
-      alert('Please fill in all required fields');
-      return;
-    }
-    
+  const handleSignupInitial = () => {
+    setSignupStep('form');
+  };
+
+  const handleSignupForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
     setIsLoading(true);
-    setSignupMethod('phone');
+    setSignupMethod(isValidEmail(formData.emailOrPhone) ? 'email' : 'phone');
     
-    // Simulate sending OTP
+    // Simulate API call
     setTimeout(() => {
-      setAuthStep('phone-verify');
+      setSignupStep('verification');
       setIsLoading(false);
     }, 1500);
   };
 
-  const handleOTPVerification = async () => {
-    if (!formData.otp || formData.otp.length !== 6) {
-      alert('Please enter a valid 6-digit OTP');
+  const handleVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (signupMethod === 'phone' && (!formData.otp || formData.otp.length !== 6)) {
+      setErrors({ otp: 'Please enter a valid 6-digit code' });
       return;
     }
-    
+
     setIsLoading(true);
     
-    // Simulate OTP verification
+    // Simulate verification
     setTimeout(() => {
-      setAuthStep(userRole === 'seller' ? 'seller-setup' : 'preferences');
+      const mockUser = {
+        id: 'new_user_123',
+        name: formData.username,
+        email: formData.emailOrPhone,
+        role: 'buyer',
+        location: 'Nairobi'
+      };
+
+      const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
+      localStorage.setItem('vitabu_auth_token', 'new_token_123');
+      localStorage.setItem('vitabu_token_expiry', expiryTime.toString());
+      localStorage.setItem('vitabu_user', JSON.stringify(mockUser));
+
+      onAuthSuccess(mockUser);
       setIsLoading(false);
+      onClose();
     }, 1500);
   };
 
-  const handleEmailSignup = async () => {
-    if (!formData.email || !formData.name || !formData.password || formData.password !== formData.confirmPassword) {
-      alert('Please fill in all fields correctly');
-      return;
-    }
-    
-    setIsLoading(true);
-    setSignupMethod('email');
-    
-    // Simulate email signup
-    setTimeout(() => {
-      setAuthStep(userRole === 'seller' ? 'seller-setup' : 'preferences');
-      setIsLoading(false);
-    }, 1500);
+  const resetForm = () => {
+    setFormData({ username: '', emailOrPhone: '', password: '', otp: '' });
+    setErrors({});
+    setSignupStep('initial');
+    setSignupMethod(null);
+    setIsLoading(false);
+    setShowPassword(false);
+    setRememberMe(false);
   };
 
-  const requestCurrentLocation = () => {
-    setIsLoading(true);
-    setLocationError('');
-    
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by this browser');
-      setIsLoading(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        // Simulate reverse geocoding
-        setTimeout(() => {
-          setPreferences(prev => ({
-            ...prev,
-            location: {
-              county: 'Nairobi',
-              area: 'Kilimani',
-              landmark: 'Near Yaya Centre'
-            }
-          }));
-          setIsLoading(false);
-        }, 2000);
-      },
-      (error) => {
-        setLocationError('Unable to get your location. Please enter manually.');
-        setIsLoading(false);
-      },
-      { timeout: 10000, enableHighAccuracy: true }
-    );
+  const switchMode = (mode: 'login' | 'signup') => {
+    setAuthMode(mode);
+    resetForm();
   };
 
-  const handleCompleteSignup = () => {
-    if (!preferences.location.county || !preferences.location.area) {
-      alert('Please provide your location information');
-      return;
-    }
-
-    const newUser = {
-      id: Date.now().toString(),
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      role: userRole,
-      location: `${preferences.location.area}, ${preferences.location.county}`,
-      signupMethod,
-      profilePicture: signupMethod === 'facebook' ? 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?w=100' : undefined,
-      preferences: userRole === 'buyer' ? preferences : undefined,
-      sellerData: userRole === 'seller' ? sellerData : undefined
-    };
-
-    onAuthSuccess(newUser);
-    onClose();
-  };
-
-  const renderRoleSelection = () => (
+  // Render Login Form
+  const renderLogin = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
         <div className="flex items-center justify-center space-x-2 mb-4">
@@ -188,617 +208,495 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
           <h1 className="text-2xl font-poppins font-bold text-primary-800">Vitabu Vitabu</h1>
         </div>
         <h2 className="text-xl font-poppins font-semibold text-primary-700 mb-2">
-          What brings you here today?
+          Welcome Back!
         </h2>
         <p className="text-neutral-600">
-          Choose your path to start saving money on school books
+          Sign in to continue saving money on school books
         </p>
       </div>
 
-      <div className="space-y-4">
-        {/* Buyer Option */}
-        <button
-          onClick={() => handleRoleSelection('buyer')}
-          className="w-full p-6 border-2 border-neutral-200 rounded-xl hover:border-accent-500 hover:bg-accent-50 transition-all duration-200 text-left group"
-        >
-          <div className="flex items-start space-x-4">
-            <div className="p-3 bg-accent-100 rounded-lg group-hover:bg-accent-200 transition-colors">
-              <ShoppingBag className="h-6 w-6 text-accent-600" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-poppins font-semibold text-primary-800 mb-2">
-                I want to Buy Books
-              </h3>
-              <p className="text-neutral-600 text-sm mb-3">
-                Find affordable used textbooks for your child's grade and subjects
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <span className="text-xs bg-secondary-100 text-secondary-700 px-2 py-1 rounded">Save up to 70%</span>
-                <span className="text-xs bg-accent-100 text-accent-700 px-2 py-1 rounded">Local sellers</span>
-                <span className="text-xs bg-gold-100 text-gold-700 px-2 py-1 rounded">Swap options</span>
-              </div>
-            </div>
-          </div>
-        </button>
-
-        {/* Seller Option */}
-        <button
-          onClick={() => handleRoleSelection('seller')}
-          className="w-full p-6 border-2 border-neutral-200 rounded-xl hover:border-secondary-500 hover:bg-secondary-50 transition-all duration-200 text-left group"
-        >
-          <div className="flex items-start space-x-4">
-            <div className="p-3 bg-secondary-100 rounded-lg group-hover:bg-secondary-200 transition-colors">
-              <Store className="h-6 w-6 text-secondary-600" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-poppins font-semibold text-primary-800 mb-2">
-                I want to Sell Books
-              </h3>
-              <p className="text-neutral-600 text-sm mb-3">
-                Turn your used textbooks into cash and help other parents save money
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <span className="text-xs bg-secondary-100 text-secondary-700 px-2 py-1 rounded">Earn KES 6,000+</span>
-                <span className="text-xs bg-accent-100 text-accent-700 px-2 py-1 rounded">Easy listing</span>
-                <span className="text-xs bg-gold-100 text-gold-700 px-2 py-1 rounded">Trusted buyers</span>
-              </div>
-            </div>
-          </div>
-        </button>
-      </div>
-
-      <p className="text-xs text-center text-neutral-500 mt-6">
-        Don't worry - you can always switch between buying and selling later!
-      </p>
-    </div>
-  );
-
-  const renderSignupOptions = () => (
-    <div className="space-y-4">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-poppins font-bold text-primary-800 mb-2">
-          {userRole === 'buyer' ? '📚 Join as a Book Buyer' : '💰 Join as a Book Seller'}
-        </h2>
-        <p className="text-neutral-600">
-          {userRole === 'buyer' 
-            ? 'Start saving money on your child\'s textbooks today'
-            : 'Turn your unused books into cash and help other parents'
-          }
-        </p>
-      </div>
-
-      {/* Facebook Signup */}
-      <button
-        onClick={handleFacebookSignup}
-        disabled={isLoading}
-        className="w-full flex items-center justify-center space-x-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-4 px-6 rounded-lg transition-colors duration-200 disabled:opacity-50"
-      >
-        {isLoading && signupMethod === 'facebook' ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
-        ) : (
-          <Facebook className="h-5 w-5" />
-        )}
-        <span>Continue with Facebook</span>
-        <span className="text-xs bg-blue-500 px-2 py-1 rounded">Fastest</span>
-      </button>
-
-      {/* Phone Signup */}
-      <div className="space-y-3">
-        <div className="grid grid-cols-1 gap-3">
-          <input
-            type="text"
-            placeholder="Full Name"
-            value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-          />
+      <form onSubmit={handleLogin} className="space-y-4">
+        {/* Email or Phone Input */}
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-2">
+            Email or Phone Number
+          </label>
           <div className="relative">
-            <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400" />
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              {getInputType(formData.emailOrPhone) === 'email' ? (
+                <Mail className="h-5 w-5 text-neutral-400" />
+              ) : (
+                <Phone className="h-5 w-5 text-neutral-400" />
+              )}
+            </div>
             <input
-              type="tel"
-              placeholder="Phone Number (e.g., +254 7XX XXX XXX)"
-              value={formData.phone}
-              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-              className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+              type={getInputType(formData.emailOrPhone)}
+              value={formData.emailOrPhone}
+              onChange={(e) => handleInputChange('emailOrPhone', e.target.value)}
+              className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
+                errors.emailOrPhone ? 'border-red-500' : 'border-neutral-300'
+              }`}
+              placeholder="your.email@example.com or +254712345678"
             />
           </div>
-        </div>
-        <button
-          onClick={handlePhoneSignup}
-          disabled={isLoading}
-          className="w-full flex items-center justify-center space-x-2 bg-secondary-600 hover:bg-secondary-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 disabled:opacity-50"
-        >
-          {isLoading && signupMethod === 'phone' ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Phone className="h-5 w-5" />
+          {errors.emailOrPhone && (
+            <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+              <AlertCircle className="h-4 w-4" />
+              <span>{errors.emailOrPhone}</span>
+            </p>
           )}
-          <span>Sign up with Phone Number</span>
-        </button>
-      </div>
+        </div>
 
+        {/* Password Input */}
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-2">
+            Password
+          </label>
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={formData.password}
+              onChange={(e) => handleInputChange('password', e.target.value)}
+              className={`w-full pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
+                errors.password ? 'border-red-500' : 'border-neutral-300'
+              }`}
+              placeholder="Enter your password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5 text-neutral-400" />
+              ) : (
+                <Eye className="h-5 w-5 text-neutral-400" />
+              )}
+            </button>
+          </div>
+          {errors.password && (
+            <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+              <AlertCircle className="h-4 w-4" />
+              <span>{errors.password}</span>
+            </p>
+          )}
+        </div>
+
+        {/* Log In Button */}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full btn-primary py-4 text-lg font-semibold disabled:opacity-50"
+        >
+          {isLoading ? (
+            <div className="flex items-center justify-center space-x-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Signing In...</span>
+            </div>
+          ) : (
+            'Log In'
+          )}
+        </button>
+
+        {/* Remember Me & Forgot Password */}
+        <div className="flex items-center justify-between">
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="rounded border-neutral-300 text-accent-600 focus:ring-accent-500"
+            />
+            <span className="text-sm text-neutral-700">Remember me (7 days)</span>
+          </label>
+          <button
+            type="button"
+            className="text-sm text-accent-600 hover:text-accent-700 font-medium"
+          >
+            Forgot password?
+          </button>
+        </div>
+      </form>
+
+      {/* Divider */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-neutral-300" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-neutral-500">or</span>
+          <span className="px-2 bg-white text-neutral-500">or continue with</span>
         </div>
       </div>
 
-      {/* Email Signup */}
+      {/* Social Login */}
       <div className="space-y-3">
-        <div className="grid grid-cols-1 gap-3">
-          {!formData.name && (
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-            />
-          )}
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400" />
-            <input
-              type="email"
-              placeholder="Email Address"
-              value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-            />
-          </div>
-          <input
-            type="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-            className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-          />
-          <input
-            type="password"
-            placeholder="Confirm Password"
-            value={formData.confirmPassword}
-            onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-            className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-          />
-        </div>
         <button
-          onClick={handleEmailSignup}
+          onClick={() => handleSocialLogin('google')}
           disabled={isLoading}
-          className="w-full flex items-center justify-center space-x-2 bg-neutral-600 hover:bg-neutral-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 disabled:opacity-50"
+          className="w-full flex items-center justify-center space-x-3 bg-white border-2 border-neutral-200 hover:border-neutral-300 text-neutral-700 font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50"
         >
-          {isLoading && signupMethod === 'email' ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Mail className="h-5 w-5" />
-          )}
-          <span>Sign up with Email</span>
+          <Chrome className="h-5 w-5" />
+          <span>Continue with Google</span>
+        </button>
+
+        <button
+          onClick={() => handleSocialLogin('facebook')}
+          disabled={isLoading}
+          className="w-full flex items-center justify-center space-x-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50"
+        >
+          <Facebook className="h-5 w-5" />
+          <span>Continue with Facebook</span>
         </button>
       </div>
 
-      <button
-        onClick={() => setAuthStep('role-selection')}
-        className="w-full text-accent-600 hover:text-accent-700 text-sm mt-4"
-      >
-        ← Back to role selection
-      </button>
+      {/* Sign Up Link */}
+      <div className="text-center space-y-2">
+        <p className="text-sm text-neutral-600">
+          Don't have an account?{' '}
+          <button
+            onClick={() => switchMode('signup')}
+            className="text-accent-600 hover:text-accent-700 font-medium"
+          >
+            Sign up for free
+          </button>
+        </p>
+        <p className="text-xs text-neutral-500">
+          By continuing, you agree to our{' '}
+          <a href="#" className="text-accent-600 hover:text-accent-700">Terms of Service</a>
+          {' '}and{' '}
+          <a href="#" className="text-accent-600 hover:text-accent-700">Privacy Policy</a>
+        </p>
+      </div>
     </div>
   );
 
-  const renderPhoneVerification = () => (
+  // Render Signup Initial Screen
+  const renderSignupInitial = () => (
     <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-poppins font-bold text-primary-800 mb-2">
-          Verify Your Phone
+      <div className="text-center mb-8">
+        <div className="flex items-center justify-center space-x-2 mb-4">
+          <BookOpen className="h-8 w-8 text-accent-500" />
+          <h1 className="text-2xl font-poppins font-bold text-primary-800">Vitabu Vitabu</h1>
+        </div>
+        <h2 className="text-xl font-poppins font-semibold text-primary-700 mb-2">
+          Join Our Community
         </h2>
         <p className="text-neutral-600">
-          We sent a 6-digit code to {formData.phone}
+          Start saving money and helping other parents today
         </p>
       </div>
 
       <div className="space-y-4">
-        <input
-          type="text"
-          placeholder="Enter 6-digit OTP"
-          value={formData.otp}
-          onChange={(e) => setFormData(prev => ({ ...prev, otp: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
-          className="w-full px-4 py-3 text-center text-2xl font-mono border border-neutral-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-          maxLength={6}
-        />
-
+        {/* Primary Signup Button */}
         <button
-          onClick={handleOTPVerification}
-          disabled={isLoading || formData.otp.length !== 6}
-          className="w-full btn-primary disabled:opacity-50"
+          onClick={handleSignupInitial}
+          disabled={isLoading}
+          className="w-full btn-primary py-4 text-lg font-semibold"
+        >
+          Continue with Email or Phone
+        </button>
+
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-neutral-300" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-neutral-500">or continue with</span>
+          </div>
+        </div>
+
+        {/* Social Login */}
+        <div className="space-y-3">
+          <button
+            onClick={() => handleSocialLogin('google')}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center space-x-3 bg-white border-2 border-neutral-200 hover:border-neutral-300 text-neutral-700 font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Chrome className="h-5 w-5" />
+            <span>Continue with Google</span>
+          </button>
+
+          <button
+            onClick={() => handleSocialLogin('facebook')}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center space-x-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Facebook className="h-5 w-5" />
+            <span>Continue with Facebook</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Login Link */}
+      <div className="text-center">
+        <p className="text-sm text-neutral-600">
+          Already have an account?{' '}
+          <button
+            onClick={() => switchMode('login')}
+            className="text-accent-600 hover:text-accent-700 font-medium"
+          >
+            Sign in here
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+
+  // Render Signup Form
+  const renderSignupForm = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-poppins font-semibold text-primary-700 mb-2">
+          Create Your Account
+        </h2>
+        <p className="text-neutral-600">
+          Just a few details to get you started
+        </p>
+      </div>
+
+      <form onSubmit={handleSignupForm} className="space-y-4">
+        {/* Username */}
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-2">
+            Username
+          </label>
+          <input
+            type="text"
+            value={formData.username}
+            onChange={(e) => handleInputChange('username', e.target.value)}
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
+              errors.username ? 'border-red-500' : 'border-neutral-300'
+            }`}
+            placeholder="Choose a username"
+          />
+          {errors.username && (
+            <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+              <AlertCircle className="h-4 w-4" />
+              <span>{errors.username}</span>
+            </p>
+          )}
+        </div>
+
+        {/* Email or Phone */}
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-2">
+            Email or Phone Number
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              {getInputType(formData.emailOrPhone) === 'email' ? (
+                <Mail className="h-5 w-5 text-neutral-400" />
+              ) : (
+                <Phone className="h-5 w-5 text-neutral-400" />
+              )}
+            </div>
+            <input
+              type={getInputType(formData.emailOrPhone)}
+              value={formData.emailOrPhone}
+              onChange={(e) => handleInputChange('emailOrPhone', e.target.value)}
+              className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
+                errors.emailOrPhone ? 'border-red-500' : 'border-neutral-300'
+              }`}
+              placeholder="your.email@example.com or +254712345678"
+            />
+          </div>
+          {errors.emailOrPhone && (
+            <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+              <AlertCircle className="h-4 w-4" />
+              <span>{errors.emailOrPhone}</span>
+            </p>
+          )}
+        </div>
+
+        {/* Password */}
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-2">
+            Create Password
+          </label>
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={formData.password}
+              onChange={(e) => handleInputChange('password', e.target.value)}
+              className={`w-full pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
+                errors.password ? 'border-red-500' : 'border-neutral-300'
+              }`}
+              placeholder="Create a secure password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5 text-neutral-400" />
+              ) : (
+                <Eye className="h-5 w-5 text-neutral-400" />
+              )}
+            </button>
+          </div>
+          {errors.password && (
+            <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+              <AlertCircle className="h-4 w-4" />
+              <span>{errors.password}</span>
+            </p>
+          )}
+        </div>
+
+        {/* Sign Up Button */}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full btn-primary py-4 text-lg font-semibold disabled:opacity-50"
         >
           {isLoading ? (
             <div className="flex items-center justify-center space-x-2">
               <Loader2 className="h-5 w-5 animate-spin" />
-              <span>Verifying...</span>
+              <span>Creating Account...</span>
             </div>
           ) : (
-            'Verify & Continue'
+            'Sign Up'
           )}
         </button>
+      </form>
 
+      {/* Back Button */}
+      <div className="text-center">
         <button
-          onClick={() => setAuthStep('signup')}
-          className="w-full text-accent-600 hover:text-accent-700 text-sm"
+          onClick={() => setSignupStep('initial')}
+          className="text-sm text-accent-600 hover:text-accent-700 font-medium"
         >
-          ← Back to signup options
+          ← Back to options
         </button>
       </div>
     </div>
   );
 
-  const renderBuyerPreferences = () => (
+  // Render Verification Screen
+  const renderVerification = () => (
     <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-poppins font-bold text-primary-800 mb-2">
-          Let's personalize your experience
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-poppins font-semibold text-primary-700 mb-2">
+          {signupMethod === 'phone' ? 'Verify Your Phone' : 'Check Your Email'}
         </h2>
         <p className="text-neutral-600">
-          Help us show you the most relevant books for your child
+          {signupMethod === 'phone' 
+            ? `We sent a 6-digit code to ${formData.emailOrPhone}`
+            : `We sent a verification link to ${formData.emailOrPhone}`
+          }
         </p>
       </div>
 
-      <div className="space-y-6">
-        {/* Child's Grade */}
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-3">
-            What grade(s) are you looking for? (Select all that apply)
-          </label>
-          <div className="grid grid-cols-4 gap-2">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map(grade => (
-              <button
-                key={grade}
-                onClick={() => {
-                  setPreferences(prev => ({
-                    ...prev,
-                    childGrades: prev.childGrades.includes(grade)
-                      ? prev.childGrades.filter(g => g !== grade)
-                      : [...prev.childGrades, grade]
-                  }));
-                }}
-                className={`p-3 rounded-lg border-2 transition-colors ${
-                  preferences.childGrades.includes(grade)
-                    ? 'border-accent-500 bg-accent-50 text-accent-700'
-                    : 'border-neutral-200 hover:border-neutral-300'
-                }`}
-              >
-                Grade {grade}
-              </button>
-            ))}
+      {signupMethod === 'phone' ? (
+        <form onSubmit={handleVerification} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-2">
+              Verification Code
+            </label>
+            <input
+              type="text"
+              value={formData.otp}
+              onChange={(e) => handleInputChange('otp', e.target.value.replace(/\D/g, '').slice(0, 6))}
+              className={`w-full px-4 py-3 text-center text-2xl font-mono border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
+                errors.otp ? 'border-red-500' : 'border-neutral-300'
+              }`}
+              placeholder="000000"
+              maxLength={6}
+            />
+            {errors.otp && (
+              <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                <AlertCircle className="h-4 w-4" />
+                <span>{errors.otp}</span>
+              </p>
+            )}
           </div>
-        </div>
 
-        {/* Subjects */}
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-3">
-            Which subjects are you most interested in?
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {subjects.map(subject => (
-              <button
-                key={subject}
-                onClick={() => {
-                  setPreferences(prev => ({
-                    ...prev,
-                    subjects: prev.subjects.includes(subject)
-                      ? prev.subjects.filter(s => s !== subject)
-                      : [...prev.subjects, subject]
-                  }));
-                }}
-                className={`p-3 rounded-lg border-2 transition-colors text-sm ${
-                  preferences.subjects.includes(subject)
-                    ? 'border-accent-500 bg-accent-50 text-accent-700'
-                    : 'border-neutral-200 hover:border-neutral-300'
-                }`}
-              >
-                {subject}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Location */}
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-3">
-            Where are you located?
-          </label>
-          
-          <div className="space-y-3">
-            {/* Current Location Option */}
-            <div className="p-3 border border-accent-200 rounded-lg bg-accent-50">
-              <button
-                onClick={requestCurrentLocation}
-                disabled={isLoading}
-                className="w-full flex items-center justify-center space-x-2 text-accent-700 font-medium"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Getting your location...</span>
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="h-4 w-4" />
-                    <span>Use my current location</span>
-                  </>
-                )}
-              </button>
-              {locationError && (
-                <p className="text-red-600 text-xs mt-2 text-center">{locationError}</p>
-              )}
-            </div>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-neutral-300" />
+          <button
+            type="submit"
+            disabled={isLoading || formData.otp.length !== 6}
+            className="w-full btn-primary py-4 text-lg font-semibold disabled:opacity-50"
+          >
+            {isLoading ? (
+              <div className="flex items-center justify-center space-x-2">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Verifying...</span>
               </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="px-2 bg-white text-neutral-500">or enter manually</span>
-              </div>
-            </div>
+            ) : (
+              'Verify & Complete'
+            )}
+          </button>
 
-            <div className="grid grid-cols-1 gap-3">
-              <select
-                value={preferences.location.county}
-                onChange={(e) => setPreferences(prev => ({
-                  ...prev,
-                  location: { ...prev.location, county: e.target.value }
-                }))}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-              >
-                <option value="">Select County</option>
-                {kenyanCounties.map(county => (
-                  <option key={county} value={county}>{county}</option>
-                ))}
-              </select>
-
-              <input
-                type="text"
-                placeholder="Area/Suburb (e.g., Kilimani)"
-                value={preferences.location.area}
-                onChange={(e) => setPreferences(prev => ({
-                  ...prev,
-                  location: { ...prev.location, area: e.target.value }
-                }))}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-              />
-            </div>
+          <div className="text-center">
+            <button
+              type="button"
+              className="text-sm text-accent-600 hover:text-accent-700 font-medium"
+            >
+              Didn't receive the code? Resend
+            </button>
           </div>
-        </div>
-
-        {/* Notifications */}
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-3">
-            Get notified about:
-          </label>
+        </form>
+      ) : (
+        <div className="text-center space-y-6">
+          <div className="w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mx-auto">
+            <Mail className="h-8 w-8 text-accent-600" />
+          </div>
           <div className="space-y-2">
-            {[
-              { key: 'priceDrops', label: 'Price drops on books you\'re watching' },
-              { key: 'newListings', label: 'New books in your grade/subject' },
-              { key: 'swapMatches', label: 'Potential book swap matches' }
-            ].map(({ key, label }) => (
-              <label key={key} className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  checked={preferences.notifications[key as keyof typeof preferences.notifications]}
-                  onChange={(e) => setPreferences(prev => ({
-                    ...prev,
-                    notifications: {
-                      ...prev.notifications,
-                      [key]: e.target.checked
-                    }
-                  }))}
-                  className="rounded border-neutral-300 text-accent-600 focus:ring-accent-500"
-                />
-                <span className="text-sm text-neutral-700">{label}</span>
-              </label>
-            ))}
+            <p className="text-neutral-700">
+              Click the verification link in your email to complete your account setup.
+            </p>
+            <p className="text-sm text-neutral-500">
+              Check your spam folder if you don't see it in your inbox.
+            </p>
           </div>
+          <button
+            onClick={() => handleVerification({ preventDefault: () => {} } as any)}
+            disabled={isLoading}
+            className="btn-primary px-6 py-3"
+          >
+            {isLoading ? (
+              <div className="flex items-center space-x-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Checking...</span>
+              </div>
+            ) : (
+              'I\'ve verified my email'
+            )}
+          </button>
         </div>
+      )}
 
-        <button
-          onClick={handleCompleteSignup}
-          disabled={!preferences.location.county || !preferences.location.area}
-          className="w-full btn-primary disabled:opacity-50"
-        >
-          Complete Setup & Start Browsing
-        </button>
-
-        <div className="bg-secondary-50 p-4 rounded-lg">
-          <p className="text-sm text-secondary-700">
-            🎉 <strong>Welcome bonus:</strong> Get alerts for your first 5 book matches for free!
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderSellerSetup = () => (
-    <div className="space-y-6">
+      {/* Back Button */}
       <div className="text-center">
-        <h2 className="text-2xl font-poppins font-bold text-primary-800 mb-2">
-          Set up your seller profile
-        </h2>
-        <p className="text-neutral-600">
-          Let's get you ready to start earning from your books
-        </p>
-      </div>
-
-      <div className="space-y-6">
-        {/* Location */}
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-3">
-            Where are you located?
-          </label>
-          
-          <div className="space-y-3">
-            <div className="p-3 border border-accent-200 rounded-lg bg-accent-50">
-              <button
-                onClick={requestCurrentLocation}
-                disabled={isLoading}
-                className="w-full flex items-center justify-center space-x-2 text-accent-700 font-medium"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Getting your location...</span>
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="h-4 w-4" />
-                    <span>Use my current location</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3">
-              <select
-                value={preferences.location.county}
-                onChange={(e) => setPreferences(prev => ({
-                  ...prev,
-                  location: { ...prev.location, county: e.target.value }
-                }))}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-              >
-                <option value="">Select County</option>
-                {kenyanCounties.map(county => (
-                  <option key={county} value={county}>{county}</option>
-                ))}
-              </select>
-
-              <input
-                type="text"
-                placeholder="Area/Suburb"
-                value={preferences.location.area}
-                onChange={(e) => setPreferences(prev => ({
-                  ...prev,
-                  location: { ...prev.location, area: e.target.value }
-                }))}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Seller Bio */}
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-3">
-            Tell buyers about yourself (optional)
-          </label>
-          <textarea
-            placeholder="e.g., Parent of 2 kids, selling books they've outgrown. All books well-maintained and from smoke-free home."
-            value={sellerData.bio}
-            onChange={(e) => setSellerData(prev => ({ ...prev, bio: e.target.value }))}
-            className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-            rows={3}
-          />
-        </div>
-
-        {/* Delivery Methods */}
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-3">
-            How would you prefer to deliver books?
-          </label>
-          <div className="grid grid-cols-1 gap-2">
-            {deliveryOptions.map(option => (
-              <button
-                key={option}
-                onClick={() => {
-                  setSellerData(prev => ({
-                    ...prev,
-                    deliveryMethods: prev.deliveryMethods.includes(option)
-                      ? prev.deliveryMethods.filter(m => m !== option)
-                      : [...prev.deliveryMethods, option]
-                  }));
-                }}
-                className={`p-3 rounded-lg border-2 transition-colors text-sm text-left ${
-                  sellerData.deliveryMethods.includes(option)
-                    ? 'border-accent-500 bg-accent-50 text-accent-700'
-                    : 'border-neutral-200 hover:border-neutral-300'
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Earnings Estimate */}
-        <div className="bg-gold-50 p-4 rounded-lg border border-gold-200">
-          <div className="flex items-center space-x-2 mb-2">
-            <DollarSign className="h-5 w-5 text-gold-600" />
-            <h3 className="font-medium text-gold-800">Potential Earnings</h3>
-          </div>
-          <p className="text-sm text-gold-700 mb-3">
-            Based on average book prices in your area, you could earn:
-          </p>
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="bg-white p-2 rounded">
-              <div className="font-bold text-gold-800">KES 2,000</div>
-              <div className="text-xs text-gold-600">5-10 books</div>
-            </div>
-            <div className="bg-white p-2 rounded">
-              <div className="font-bold text-gold-800">KES 6,000</div>
-              <div className="text-xs text-gold-600">15-20 books</div>
-            </div>
-            <div className="bg-white p-2 rounded">
-              <div className="font-bold text-gold-800">KES 12,000+</div>
-              <div className="text-xs text-gold-600">30+ books</div>
-            </div>
-          </div>
-        </div>
-
         <button
-          onClick={handleCompleteSignup}
-          disabled={!preferences.location.county || !preferences.location.area}
-          className="w-full btn-primary disabled:opacity-50"
+          onClick={() => setSignupStep('form')}
+          className="text-sm text-accent-600 hover:text-accent-700 font-medium"
         >
-          Complete Setup & List Your First Book
+          ← Back to form
         </button>
-
-        <div className="bg-secondary-50 p-4 rounded-lg">
-          <p className="text-sm text-secondary-700">
-            🚀 <strong>Seller bonus:</strong> List your first book within 24 hours and get featured placement for free!
-          </p>
-        </div>
       </div>
     </div>
   );
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[95vh] overflow-y-auto">
         <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="w-6"></div>
-            <div className="text-center">
-              {authStep !== 'role-selection' && (
-                <div className="flex items-center justify-center space-x-2 mb-2">
-                  <div className="w-8 h-8 bg-accent-500 rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">VV</span>
-                  </div>
-                </div>
-              )}
-            </div>
+          {/* Close Button */}
+          <div className="flex justify-end mb-4">
             <button
               onClick={onClose}
-              className="text-neutral-400 hover:text-neutral-600"
+              className="text-neutral-400 hover:text-neutral-600 transition-colors"
             >
               <X className="h-6 w-6" />
             </button>
           </div>
 
-          {authStep === 'role-selection' && renderRoleSelection()}
-          {authStep === 'signup' && renderSignupOptions()}
-          {authStep === 'phone-verify' && renderPhoneVerification()}
-          {authStep === 'preferences' && userRole === 'buyer' && renderBuyerPreferences()}
-          {authStep === 'seller-setup' && userRole === 'seller' && renderSellerSetup()}
+          {/* Content */}
+          {authMode === 'login' && renderLogin()}
+          {authMode === 'signup' && signupStep === 'initial' && renderSignupInitial()}
+          {authMode === 'signup' && signupStep === 'form' && renderSignupForm()}
+          {authMode === 'signup' && signupStep === 'verification' && renderVerification()}
         </div>
       </div>
     </div>

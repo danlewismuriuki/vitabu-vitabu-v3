@@ -13,6 +13,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
   onLogout,
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
+  
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
@@ -37,19 +38,18 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
 
   if (!currentUser) {
     return (
-      <div className="flex space-x-2">
+      <div className="flex space-x-3">
         <button
           onClick={() => onAuthClick("login")}
-          className="btn-primary text-sm px-5 py-2 flex items-center space-x-2"
+          className="text-neutral-600 hover:text-primary-700 font-medium px-4 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
         >
-          <User className="h-4 w-4" />
-          <span>Sign In</span>
+          Sign In
         </button>
         <button
           onClick={() => onAuthClick("signup")}
-          className="btn-secondary text-sm px-5 py-2 border border-primary-500 text-primary-600 hover:bg-primary-50 rounded"
+          className="btn-primary text-sm px-5 py-2"
         >
-          <span>Sign Up</span>
+          Sign Up
         </button>
       </div>
     );

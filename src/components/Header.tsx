@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Bell, BookOpen, Menu } from "lucide-react";
 import { SearchBar, SearchFilters } from "./SearchBar";
-import AuthFlow from "./AuthFlow";
+import { AuthModal } from "./AuthModal";
 import { AuthButton } from "./AuthButton";
 import { Book } from "../types";
 import { getCurrentUser, isTokenValid } from "../utils/auth";
@@ -22,7 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   onUserChange,
 }) => {
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
-  const [showAuthFlow, setShowAuthFlow] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [user, setUser] = useState(currentUser);
 
   // Check for existing auth on mount
@@ -55,13 +55,18 @@ export const Header: React.FC<HeaderProps> = ({
     setUser(newUser);
     onAuthSuccess?.(newUser);
     onUserChange?.(newUser);
-    setShowAuthFlow(false);
+    setShowAuthModal(false);
     console.log("User authenticated:", newUser);
   };
 
   const handleLogout = () => {
     setUser(null);
     onUserChange?.(null);
+  };
+
+  const handleAuthClick = (mode: "login" | "signup") => {
+    setAuthMode(mode);
+    setShowAuthModal(true);
   };
 
   return (
@@ -113,10 +118,7 @@ export const Header: React.FC<HeaderProps> = ({
               {/* Auth Button */}
               <AuthButton
                 currentUser={user}
-                onAuthClick={(mode: "login" | "signup") => {
-                  setAuthMode(mode);
-                  setShowAuthFlow(true);
-                }}
+                onAuthClick={handleAuthClick}
                 onLogout={handleLogout}
               />
             </div>
@@ -135,12 +137,13 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
 
-      {/* Auth Flow Modal */}
-      {showAuthFlow && (
-        <AuthFlow
-          mode={authMode}
-          onClose={() => setShowAuthFlow(false)}
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
           onAuthSuccess={handleAuthSuccess}
+          initialMode={authMode}
         />
       )}
     </>
