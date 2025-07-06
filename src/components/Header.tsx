@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, BookOpen, Menu } from 'lucide-react';
-import { SearchBar, SearchFilters } from './SearchBar';
-import { AuthFlow } from './AuthFlow';
-import { AuthButton } from './AuthButton';
-import { Book } from '../types';
-import { getCurrentUser, isTokenValid } from '../utils/auth';
+import React, { useState, useEffect } from "react";
+import { Bell, BookOpen, Menu } from "lucide-react";
+import { SearchBar, SearchFilters } from "./SearchBar";
+import AuthFlow from "./AuthFlow";
+import { AuthButton } from "./AuthButton";
+import { Book } from "../types";
+import { getCurrentUser, isTokenValid } from "../utils/auth";
 
 interface HeaderProps {
   currentUser?: any;
@@ -14,13 +14,14 @@ interface HeaderProps {
   onUserChange?: (user: any) => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ 
-  currentUser, 
-  onSearch, 
+export const Header: React.FC<HeaderProps> = ({
+  currentUser,
+  onSearch,
   onBookSelect,
   onAuthSuccess,
-  onUserChange
+  onUserChange,
 }) => {
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [showAuthFlow, setShowAuthFlow] = useState(false);
   const [user, setUser] = useState(currentUser);
 
@@ -41,12 +42,12 @@ export const Header: React.FC<HeaderProps> = ({
   }, [currentUser]);
 
   const handleSearch = (query: string, filters: SearchFilters) => {
-    console.log('Header search query:', query, 'Filters:', filters);
+    console.log("Header search query:", query, "Filters:", filters);
     onSearch?.(query, filters);
   };
 
   const handleResultSelect = (book: Book) => {
-    console.log('Header selected book:', book);
+    console.log("Header selected book:", book);
     onBookSelect?.(book);
   };
 
@@ -55,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
     onAuthSuccess?.(newUser);
     onUserChange?.(newUser);
     setShowAuthFlow(false);
-    console.log('User authenticated:', newUser);
+    console.log("User authenticated:", newUser);
   };
 
   const handleLogout = () => {
@@ -76,7 +77,9 @@ export const Header: React.FC<HeaderProps> = ({
                   <h1 className="font-poppins font-bold text-primary-700 text-lg leading-tight">
                     Vitabu Vitabu
                   </h1>
-                  <p className="text-xs text-neutral-500 -mt-1">Real Parents. Real Savings.</p>
+                  <p className="text-xs text-neutral-500 -mt-1">
+                    Real Parents. Real Savings.
+                  </p>
                 </div>
               </div>
             </div>
@@ -110,7 +113,10 @@ export const Header: React.FC<HeaderProps> = ({
               {/* Auth Button */}
               <AuthButton
                 currentUser={user}
-                onAuthClick={() => setShowAuthFlow(true)}
+                onAuthClick={(mode: "login" | "signup") => {
+                  setAuthMode(mode);
+                  setShowAuthFlow(true);
+                }}
                 onLogout={handleLogout}
               />
             </div>
@@ -130,11 +136,13 @@ export const Header: React.FC<HeaderProps> = ({
       </header>
 
       {/* Auth Flow Modal */}
-      <AuthFlow
-        isOpen={showAuthFlow}
-        onClose={() => setShowAuthFlow(false)}
-        onAuthSuccess={handleAuthSuccess}
-      />
+      {showAuthFlow && (
+        <AuthFlow
+          mode={authMode}
+          onClose={() => setShowAuthFlow(false)}
+          onAuthSuccess={handleAuthSuccess}
+        />
+      )}
     </>
   );
 };

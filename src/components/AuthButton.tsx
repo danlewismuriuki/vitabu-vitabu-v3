@@ -1,50 +1,57 @@
-import React, { useState, useEffect } from 'react';
-import { User, LogOut, Settings, BookOpen, Heart, Bell } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { User, LogOut, Settings, BookOpen, Heart, Bell } from "lucide-react";
 
 interface AuthButtonProps {
   currentUser?: any;
-  onAuthClick: () => void;
+  onAuthClick: (mode: "login" | "signup") => void;
   onLogout: () => void;
 }
 
-export const AuthButton: React.FC<AuthButtonProps> = ({ 
-  currentUser, 
-  onAuthClick, 
-  onLogout 
+export const AuthButton: React.FC<AuthButtonProps> = ({
+  currentUser,
+  onAuthClick,
+  onLogout,
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
-      if (!target.closest('.auth-dropdown')) {
+      if (!target.closest(".auth-dropdown")) {
         setShowDropdown(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleLogout = () => {
     // Clear auth data
-    localStorage.removeItem('vitabu_auth_token');
-    localStorage.removeItem('vitabu_token_expiry');
-    localStorage.removeItem('vitabu_user');
-    
+    localStorage.removeItem("vitabu_auth_token");
+    localStorage.removeItem("vitabu_token_expiry");
+    localStorage.removeItem("vitabu_user");
+
     setShowDropdown(false);
     onLogout();
   };
 
   if (!currentUser) {
     return (
-      <button 
-        onClick={onAuthClick}
-        className="btn-primary text-sm px-6 py-2 flex items-center space-x-2"
-      >
-        <User className="h-4 w-4" />
-        <span>Sign In</span>
-      </button>
+      <div className="flex space-x-2">
+        <button
+          onClick={() => onAuthClick("login")}
+          className="btn-primary text-sm px-5 py-2 flex items-center space-x-2"
+        >
+          <User className="h-4 w-4" />
+          <span>Sign In</span>
+        </button>
+        <button
+          onClick={() => onAuthClick("signup")}
+          className="btn-secondary text-sm px-5 py-2 border border-primary-500 text-primary-600 hover:bg-primary-50 rounded"
+        >
+          <span>Sign Up</span>
+        </button>
+      </div>
     );
   }
 
@@ -55,15 +62,17 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
         className="flex items-center space-x-3 p-2 rounded-lg hover:bg-neutral-100 transition-colors"
       >
         <div className="text-right hidden sm:block">
-          <p className="text-sm font-medium text-primary-700">{currentUser.name}</p>
+          <p className="text-sm font-medium text-primary-700">
+            {currentUser.name}
+          </p>
           <p className="text-xs text-neutral-500">
-            {currentUser.role === 'seller' ? 'Seller' : 'Buyer'}
+            {currentUser.role === "seller" ? "Seller" : "Buyer"}
           </p>
         </div>
         <div className="h-8 w-8 rounded-full bg-accent-100 flex items-center justify-center overflow-hidden">
           {currentUser.profilePicture ? (
-            <img 
-              src={currentUser.profilePicture} 
+            <img
+              src={currentUser.profilePicture}
               alt={currentUser.name}
               className="h-8 w-8 rounded-full object-cover"
             />
@@ -80,8 +89,8 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
             <div className="flex items-center space-x-3">
               <div className="h-10 w-10 rounded-full bg-accent-100 flex items-center justify-center overflow-hidden">
                 {currentUser.profilePicture ? (
-                  <img 
-                    src={currentUser.profilePicture} 
+                  <img
+                    src={currentUser.profilePicture}
                     alt={currentUser.name}
                     className="h-10 w-10 rounded-full object-cover"
                   />
@@ -90,7 +99,9 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
                 )}
               </div>
               <div>
-                <p className="font-medium text-primary-700">{currentUser.name}</p>
+                <p className="font-medium text-primary-700">
+                  {currentUser.name}
+                </p>
                 <p className="text-sm text-neutral-500">{currentUser.email}</p>
               </div>
             </div>
@@ -118,7 +129,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
 
           {/* Logout */}
           <div className="border-t border-neutral-200 pt-2">
-            <button 
+            <button
               onClick={handleLogout}
               className="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center space-x-3 text-red-600"
             >
