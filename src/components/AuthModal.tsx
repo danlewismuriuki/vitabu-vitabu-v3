@@ -1,31 +1,64 @@
-import React, { useState } from 'react';
-import { X, Facebook, Phone, Mail, MapPin, Loader2, ShoppingBag, Store, BookOpen, Camera, DollarSign, Chrome, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
+import React, { useState } from "react";
+import {
+  X,
+  Facebook,
+  Phone,
+  Mail,
+  MapPin,
+  Loader2,
+  ShoppingBag,
+  Store,
+  BookOpen,
+  Camera,
+  DollarSign,
+  Chrome,
+  Eye,
+  EyeOff,
+  Check,
+  AlertCircle,
+} from "lucide-react";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAuthSuccess: (user: any) => void;
-  initialMode?: 'login' | 'signup';
+  onLogin: (
+    email: string,
+    password: string,
+    rememberMe: boolean
+  ) => Promise<void>;
+  onSignup: (
+    username: string,
+    email: string,
+    password: string
+  ) => Promise<void>;
+  onSocialLogin: (provider: "google" | "facebook") => Promise<void>;
+  initialMode?: "login" | "signup";
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  onAuthSuccess,
-  initialMode = 'login'
+export const AuthModal: React.FC<AuthModalProps> = ({
+  isOpen,
+  onClose,
+  onLogin,
+  onSignup,
+  onSocialLogin,
+  initialMode = "login",
 }) => {
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>(initialMode);
-  const [signupStep, setSignupStep] = useState<'initial' | 'form' | 'verification'>('initial');
-  const [signupMethod, setSignupMethod] = useState<'email' | 'phone' | null>(null);
+  const [authMode, setAuthMode] = useState<"login" | "signup">(initialMode);
+  const [signupStep, setSignupStep] = useState<
+    "initial" | "form" | "verification"
+  >("initial");
+  const [signupMethod, setSignupMethod] = useState<"email" | "phone" | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  
+
   const [formData, setFormData] = useState({
-    username: '',
-    emailOrPhone: '',
-    password: '',
-    otp: ''
+    username: "",
+    emailOrPhone: "",
+    password: "",
+    otp: "",
   });
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -34,44 +67,56 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   // Helper functions
   const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
-  const isValidPhone = (value: string) => /^\+?254[0-9]{9}$|^0[0-9]{9}$/.test(value);
+  const isValidPhone = (value: string) =>
+    /^\+?254[0-9]{9}$|^0[0-9]{9}$/.test(value);
   const getInputType = (value: string) => {
-    if (isValidEmail(value)) return 'email';
-    if (value.startsWith('+254') || value.startsWith('07') || value.startsWith('01')) return 'phone';
-    return 'text';
+    if (isValidEmail(value)) return "email";
+    if (
+      value.startsWith("+254") ||
+      value.startsWith("07") ||
+      value.startsWith("01")
+    )
+      return "phone";
+    return "text";
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear errors when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
-    if (authMode === 'login') {
+    if (authMode === "login") {
       if (!formData.emailOrPhone) {
-        newErrors.emailOrPhone = 'Email or phone number is required';
-      } else if (!isValidEmail(formData.emailOrPhone) && !isValidPhone(formData.emailOrPhone)) {
-        newErrors.emailOrPhone = 'Please enter a valid email or phone number';
+        newErrors.emailOrPhone = "Email or phone number is required";
+      } else if (
+        !isValidEmail(formData.emailOrPhone) &&
+        !isValidPhone(formData.emailOrPhone)
+      ) {
+        newErrors.emailOrPhone = "Please enter a valid email or phone number";
       }
       if (!formData.password) {
-        newErrors.password = 'Password is required';
+        newErrors.password = "Password is required";
       }
-    } else if (authMode === 'signup' && signupStep === 'form') {
+    } else if (authMode === "signup" && signupStep === "form") {
       if (!formData.username || formData.username.length < 3) {
-        newErrors.username = 'Username must be at least 3 characters';
+        newErrors.username = "Username must be at least 3 characters";
       }
       if (!formData.emailOrPhone) {
-        newErrors.emailOrPhone = 'Email or phone number is required';
-      } else if (!isValidEmail(formData.emailOrPhone) && !isValidPhone(formData.emailOrPhone)) {
-        newErrors.emailOrPhone = 'Please enter a valid email or phone number';
+        newErrors.emailOrPhone = "Email or phone number is required";
+      } else if (
+        !isValidEmail(formData.emailOrPhone) &&
+        !isValidPhone(formData.emailOrPhone)
+      ) {
+        newErrors.emailOrPhone = "Please enter a valid email or phone number";
       }
       if (!formData.password || formData.password.length < 6) {
-        newErrors.password = 'Password must be at least 6 characters';
+        newErrors.password = "Password must be at least 6 characters";
       }
     }
 
@@ -84,59 +129,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (!validateForm()) return;
 
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      const mockUser = {
-        id: 'user_123',
-        name: 'John Doe',
-        email: formData.emailOrPhone,
-        role: 'buyer',
-        location: 'Nairobi'
-      };
-
-      // Store auth data
-      const expiryTime = rememberMe 
-        ? Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days
-        : Date.now() + (24 * 60 * 60 * 1000); // 1 day
-
-      localStorage.setItem('vitabu_auth_token', 'mock_token_123');
-      localStorage.setItem('vitabu_token_expiry', expiryTime.toString());
-      localStorage.setItem('vitabu_user', JSON.stringify(mockUser));
-
-      onAuthSuccess(mockUser);
-      setIsLoading(false);
+    try {
+      await onLogin(formData.emailOrPhone, formData.password, rememberMe);
       onClose();
-    }, 1500);
+    } catch (err) {
+      setErrors({ password: "Login failed. Please check your credentials." });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSocialLogin = async (provider: 'google' | 'facebook') => {
+  const handleSocialLogin = async (provider: "google" | "facebook") => {
     setIsLoading(true);
-    
-    // Simulate social login
-    setTimeout(() => {
-      const mockUser = {
-        id: `${provider}_123`,
-        name: provider === 'google' ? 'Jane Smith' : 'Mary Wanjiku',
-        email: `user@${provider}.com`,
-        role: 'buyer',
-        location: 'Nairobi',
-        profilePicture: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?w=100'
-      };
-
-      const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
-      localStorage.setItem('vitabu_auth_token', `${provider}_token_123`);
-      localStorage.setItem('vitabu_token_expiry', expiryTime.toString());
-      localStorage.setItem('vitabu_user', JSON.stringify(mockUser));
-
-      onAuthSuccess(mockUser);
-      setIsLoading(false);
+    try {
+      await onSocialLogin(provider);
       onClose();
-    }, 2000);
+    } catch (err) {
+      console.error("Social login failed", err);
+      // optionally show a message
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignupInitial = () => {
-    setSignupStep('form');
+    setSignupStep("form");
   };
 
   const handleSignupForm = async (e: React.FormEvent) => {
@@ -144,57 +161,59 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (!validateForm()) return;
 
     setIsLoading(true);
-    setSignupMethod(isValidEmail(formData.emailOrPhone) ? 'email' : 'phone');
-    
+    setSignupMethod(isValidEmail(formData.emailOrPhone) ? "email" : "phone");
+
     // Simulate API call
     setTimeout(() => {
-      setSignupStep('verification');
+      setSignupStep("verification");
       setIsLoading(false);
     }, 1500);
   };
 
   const handleVerification = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (signupMethod === 'phone' && (!formData.otp || formData.otp.length !== 6)) {
-      setErrors({ otp: 'Please enter a valid 6-digit code' });
+
+    if (
+      signupMethod === "phone" &&
+      (!formData.otp || formData.otp.length !== 6)
+    ) {
+      setErrors({ otp: "Please enter a valid 6-digit code" });
       return;
     }
 
     setIsLoading(true);
-    
+
     // Simulate verification
     setTimeout(() => {
       const mockUser = {
-        id: 'new_user_123',
+        id: "new_user_123",
         name: formData.username,
         email: formData.emailOrPhone,
-        role: 'buyer',
-        location: 'Nairobi'
+        role: "buyer",
+        location: "Nairobi",
       };
 
-      const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
-      localStorage.setItem('vitabu_auth_token', 'new_token_123');
-      localStorage.setItem('vitabu_token_expiry', expiryTime.toString());
-      localStorage.setItem('vitabu_user', JSON.stringify(mockUser));
+      const expiryTime = Date.now() + 24 * 60 * 60 * 1000;
+      localStorage.setItem("vitabu_auth_token", "new_token_123");
+      localStorage.setItem("vitabu_token_expiry", expiryTime.toString());
+      localStorage.setItem("vitabu_user", JSON.stringify(mockUser));
 
-      onAuthSuccess(mockUser);
       setIsLoading(false);
       onClose();
     }, 1500);
   };
 
   const resetForm = () => {
-    setFormData({ username: '', emailOrPhone: '', password: '', otp: '' });
+    setFormData({ username: "", emailOrPhone: "", password: "", otp: "" });
     setErrors({});
-    setSignupStep('initial');
+    setSignupStep("initial");
     setSignupMethod(null);
     setIsLoading(false);
     setShowPassword(false);
     setRememberMe(false);
   };
 
-  const switchMode = (mode: 'login' | 'signup') => {
+  const switchMode = (mode: "login" | "signup") => {
     setAuthMode(mode);
     resetForm();
   };
@@ -205,7 +224,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       <div className="text-center mb-8">
         <div className="flex items-center justify-center space-x-2 mb-4">
           <BookOpen className="h-8 w-8 text-accent-500" />
-          <h1 className="text-2xl font-poppins font-bold text-primary-800">Vitabu Vitabu</h1>
+          <h1 className="text-2xl font-poppins font-bold text-primary-800">
+            Vitabu Vitabu
+          </h1>
         </div>
         <h2 className="text-xl font-poppins font-semibold text-primary-700 mb-2">
           Welcome Back!
@@ -223,7 +244,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              {getInputType(formData.emailOrPhone) === 'email' ? (
+              {getInputType(formData.emailOrPhone) === "email" ? (
                 <Mail className="h-5 w-5 text-neutral-400" />
               ) : (
                 <Phone className="h-5 w-5 text-neutral-400" />
@@ -232,9 +253,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <input
               type={getInputType(formData.emailOrPhone)}
               value={formData.emailOrPhone}
-              onChange={(e) => handleInputChange('emailOrPhone', e.target.value)}
+              onChange={(e) =>
+                handleInputChange("emailOrPhone", e.target.value)
+              }
               className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
-                errors.emailOrPhone ? 'border-red-500' : 'border-neutral-300'
+                errors.emailOrPhone ? "border-red-500" : "border-neutral-300"
               }`}
               placeholder="your.email@example.com or +254712345678"
             />
@@ -254,11 +277,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </label>
           <div className="relative">
             <input
-              type={showPassword ? 'text' : 'password'}
+              type={showPassword ? "text" : "password"}
               value={formData.password}
-              onChange={(e) => handleInputChange('password', e.target.value)}
+              onChange={(e) => handleInputChange("password", e.target.value)}
               className={`w-full pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
-                errors.password ? 'border-red-500' : 'border-neutral-300'
+                errors.password ? "border-red-500" : "border-neutral-300"
               }`}
               placeholder="Enter your password"
             />
@@ -294,7 +317,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <span>Signing In...</span>
             </div>
           ) : (
-            'Log In'
+            "Log In"
           )}
         </button>
 
@@ -307,7 +330,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               onChange={(e) => setRememberMe(e.target.checked)}
               className="rounded border-neutral-300 text-accent-600 focus:ring-accent-500"
             />
-            <span className="text-sm text-neutral-700">Remember me (7 days)</span>
+            <span className="text-sm text-neutral-700">
+              Remember me (7 days)
+            </span>
           </label>
           <button
             type="button"
@@ -324,14 +349,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div className="w-full border-t border-neutral-300" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-neutral-500">or continue with</span>
+          <span className="px-2 bg-white text-neutral-500">
+            or continue with
+          </span>
         </div>
       </div>
 
       {/* Social Login */}
       <div className="space-y-3">
         <button
-          onClick={() => handleSocialLogin('google')}
+          onClick={() => handleSocialLogin("google")}
           disabled={isLoading}
           className="w-full flex items-center justify-center space-x-3 bg-white border-2 border-neutral-200 hover:border-neutral-300 text-neutral-700 font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50"
         >
@@ -340,7 +367,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </button>
 
         <button
-          onClick={() => handleSocialLogin('facebook')}
+          onClick={() => handleSocialLogin("facebook")}
           disabled={isLoading}
           className="w-full flex items-center justify-center space-x-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50"
         >
@@ -352,19 +379,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       {/* Sign Up Link */}
       <div className="text-center space-y-2">
         <p className="text-sm text-neutral-600">
-          Don't have an account?{' '}
+          Don't have an account?{" "}
           <button
-            onClick={() => switchMode('signup')}
+            onClick={() => switchMode("signup")}
             className="text-accent-600 hover:text-accent-700 font-medium"
           >
             Sign up for free
           </button>
         </p>
         <p className="text-xs text-neutral-500">
-          By continuing, you agree to our{' '}
-          <a href="#" className="text-accent-600 hover:text-accent-700">Terms of Service</a>
-          {' '}and{' '}
-          <a href="#" className="text-accent-600 hover:text-accent-700">Privacy Policy</a>
+          By continuing, you agree to our{" "}
+          <a href="#" className="text-accent-600 hover:text-accent-700">
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a href="#" className="text-accent-600 hover:text-accent-700">
+            Privacy Policy
+          </a>
         </p>
       </div>
     </div>
@@ -376,7 +407,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       <div className="text-center mb-8">
         <div className="flex items-center justify-center space-x-2 mb-4">
           <BookOpen className="h-8 w-8 text-accent-500" />
-          <h1 className="text-2xl font-poppins font-bold text-primary-800">Vitabu Vitabu</h1>
+          <h1 className="text-2xl font-poppins font-bold text-primary-800">
+            Vitabu Vitabu
+          </h1>
         </div>
         <h2 className="text-xl font-poppins font-semibold text-primary-700 mb-2">
           Join Our Community
@@ -402,14 +435,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div className="w-full border-t border-neutral-300" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-neutral-500">or continue with</span>
+            <span className="px-2 bg-white text-neutral-500">
+              or continue with
+            </span>
           </div>
         </div>
 
         {/* Social Login */}
         <div className="space-y-3">
           <button
-            onClick={() => handleSocialLogin('google')}
+            onClick={() => handleSocialLogin("google")}
             disabled={isLoading}
             className="w-full flex items-center justify-center space-x-3 bg-white border-2 border-neutral-200 hover:border-neutral-300 text-neutral-700 font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50"
           >
@@ -418,7 +453,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
 
           <button
-            onClick={() => handleSocialLogin('facebook')}
+            onClick={() => handleSocialLogin("facebook")}
             disabled={isLoading}
             className="w-full flex items-center justify-center space-x-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50"
           >
@@ -431,9 +466,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       {/* Login Link */}
       <div className="text-center">
         <p className="text-sm text-neutral-600">
-          Already have an account?{' '}
+          Already have an account?{" "}
           <button
-            onClick={() => switchMode('login')}
+            onClick={() => switchMode("login")}
             className="text-accent-600 hover:text-accent-700 font-medium"
           >
             Sign in here
@@ -464,9 +499,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <input
             type="text"
             value={formData.username}
-            onChange={(e) => handleInputChange('username', e.target.value)}
+            onChange={(e) => handleInputChange("username", e.target.value)}
             className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
-              errors.username ? 'border-red-500' : 'border-neutral-300'
+              errors.username ? "border-red-500" : "border-neutral-300"
             }`}
             placeholder="Choose a username"
           />
@@ -485,7 +520,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              {getInputType(formData.emailOrPhone) === 'email' ? (
+              {getInputType(formData.emailOrPhone) === "email" ? (
                 <Mail className="h-5 w-5 text-neutral-400" />
               ) : (
                 <Phone className="h-5 w-5 text-neutral-400" />
@@ -494,9 +529,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <input
               type={getInputType(formData.emailOrPhone)}
               value={formData.emailOrPhone}
-              onChange={(e) => handleInputChange('emailOrPhone', e.target.value)}
+              onChange={(e) =>
+                handleInputChange("emailOrPhone", e.target.value)
+              }
               className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
-                errors.emailOrPhone ? 'border-red-500' : 'border-neutral-300'
+                errors.emailOrPhone ? "border-red-500" : "border-neutral-300"
               }`}
               placeholder="your.email@example.com or +254712345678"
             />
@@ -516,11 +553,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </label>
           <div className="relative">
             <input
-              type={showPassword ? 'text' : 'password'}
+              type={showPassword ? "text" : "password"}
               value={formData.password}
-              onChange={(e) => handleInputChange('password', e.target.value)}
+              onChange={(e) => handleInputChange("password", e.target.value)}
               className={`w-full pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
-                errors.password ? 'border-red-500' : 'border-neutral-300'
+                errors.password ? "border-red-500" : "border-neutral-300"
               }`}
               placeholder="Create a secure password"
             />
@@ -556,7 +593,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <span>Creating Account...</span>
             </div>
           ) : (
-            'Sign Up'
+            "Sign Up"
           )}
         </button>
       </form>
@@ -564,7 +601,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       {/* Back Button */}
       <div className="text-center">
         <button
-          onClick={() => setSignupStep('initial')}
+          onClick={() => setSignupStep("initial")}
           className="text-sm text-accent-600 hover:text-accent-700 font-medium"
         >
           ← Back to options
@@ -578,17 +615,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     <div className="space-y-6">
       <div className="text-center mb-6">
         <h2 className="text-xl font-poppins font-semibold text-primary-700 mb-2">
-          {signupMethod === 'phone' ? 'Verify Your Phone' : 'Check Your Email'}
+          {signupMethod === "phone" ? "Verify Your Phone" : "Check Your Email"}
         </h2>
         <p className="text-neutral-600">
-          {signupMethod === 'phone' 
+          {signupMethod === "phone"
             ? `We sent a 6-digit code to ${formData.emailOrPhone}`
-            : `We sent a verification link to ${formData.emailOrPhone}`
-          }
+            : `We sent a verification link to ${formData.emailOrPhone}`}
         </p>
       </div>
 
-      {signupMethod === 'phone' ? (
+      {signupMethod === "phone" ? (
         <form onSubmit={handleVerification} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-2">
@@ -597,9 +633,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <input
               type="text"
               value={formData.otp}
-              onChange={(e) => handleInputChange('otp', e.target.value.replace(/\D/g, '').slice(0, 6))}
+              onChange={(e) =>
+                handleInputChange(
+                  "otp",
+                  e.target.value.replace(/\D/g, "").slice(0, 6)
+                )
+              }
               className={`w-full px-4 py-3 text-center text-2xl font-mono border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 ${
-                errors.otp ? 'border-red-500' : 'border-neutral-300'
+                errors.otp ? "border-red-500" : "border-neutral-300"
               }`}
               placeholder="000000"
               maxLength={6}
@@ -623,7 +664,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <span>Verifying...</span>
               </div>
             ) : (
-              'Verify & Complete'
+              "Verify & Complete"
             )}
           </button>
 
@@ -643,14 +684,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
           <div className="space-y-2">
             <p className="text-neutral-700">
-              Click the verification link in your email to complete your account setup.
+              Click the verification link in your email to complete your account
+              setup.
             </p>
             <p className="text-sm text-neutral-500">
               Check your spam folder if you don't see it in your inbox.
             </p>
           </div>
           <button
-            onClick={() => handleVerification({ preventDefault: () => {} } as any)}
+            onClick={() =>
+              handleVerification({ preventDefault: () => {} } as any)
+            }
             disabled={isLoading}
             className="btn-primary px-6 py-3"
           >
@@ -660,7 +704,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <span>Checking...</span>
               </div>
             ) : (
-              'I\'ve verified my email'
+              "I've verified my email"
             )}
           </button>
         </div>
@@ -669,7 +713,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       {/* Back Button */}
       <div className="text-center">
         <button
-          onClick={() => setSignupStep('form')}
+          onClick={() => setSignupStep("form")}
           className="text-sm text-accent-600 hover:text-accent-700 font-medium"
         >
           ← Back to form
@@ -693,10 +737,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
 
           {/* Content */}
-          {authMode === 'login' && renderLogin()}
-          {authMode === 'signup' && signupStep === 'initial' && renderSignupInitial()}
-          {authMode === 'signup' && signupStep === 'form' && renderSignupForm()}
-          {authMode === 'signup' && signupStep === 'verification' && renderVerification()}
+          {authMode === "login" && renderLogin()}
+          {authMode === "signup" &&
+            signupStep === "initial" &&
+            renderSignupInitial()}
+          {authMode === "signup" && signupStep === "form" && renderSignupForm()}
+          {authMode === "signup" &&
+            signupStep === "verification" &&
+            renderVerification()}
         </div>
       </div>
     </div>

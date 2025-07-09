@@ -13,7 +13,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
   onLogout,
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
-  
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
@@ -43,7 +43,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
           onClick={() => onAuthClick("login")}
           className="text-neutral-600 hover:text-primary-700 font-medium px-4 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
         >
-          Sign In
+          Login In
         </button>
         <button
           onClick={() => onAuthClick("signup")}

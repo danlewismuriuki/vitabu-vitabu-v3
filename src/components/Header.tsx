@@ -4,13 +4,19 @@ import { SearchBar, SearchFilters } from "./SearchBar";
 import { AuthModal } from "./AuthModal";
 import { AuthButton } from "./AuthButton";
 import { Book } from "../types";
-import { getCurrentUser, isTokenValid } from "../utils/auth";
+import { updateProfile } from "firebase/auth";
+
+import {
+  getCurrentUser,
+  isTokenValid,
+  logIn,
+  signUp,
+} from "../utils/firebaseAuth";
 
 interface HeaderProps {
   currentUser?: any;
   onSearch?: (query: string, filters: SearchFilters) => void;
   onBookSelect?: (book: Book) => void;
-  onAuthSuccess?: (user: any) => void;
   onUserChange?: (user: any) => void;
 }
 
@@ -18,7 +24,6 @@ export const Header: React.FC<HeaderProps> = ({
   currentUser,
   onSearch,
   onBookSelect,
-  onAuthSuccess,
   onUserChange,
 }) => {
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
@@ -53,7 +58,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   const handleAuthSuccess = (newUser: any) => {
     setUser(newUser);
-    onAuthSuccess?.(newUser);
     onUserChange?.(newUser);
     setShowAuthModal(false);
     console.log("User authenticated:", newUser);
@@ -67,6 +71,59 @@ export const Header: React.FC<HeaderProps> = ({
   const handleAuthClick = (mode: "login" | "signup") => {
     setAuthMode(mode);
     setShowAuthModal(true);
+  };
+
+  const handleLogin = async (
+    email: string,
+    password: string,
+    rememberMe: boolean
+  ) => {
+    try {
+      const userCredential = await logIn(email, password, rememberMe);
+      const user = userCredential.user;
+
+      handleAuthSuccess({
+        id: user.uid,
+        name: user.displayName || user.email,
+        email: user.email,
+      });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      alert("Login failed: " + error.message);
+    }
+  };
+
+  const handleSignup = async (
+    username: string,
+    email: string,
+    password: string
+  ) => {
+    try {
+      const userCredential = await signUp(email, password);
+      const user = userCredential.user;
+
+      // Optionally set display name
+      await updateProfile(user, { displayName: username });
+
+      handleAuthSuccess({
+        id: user.uid,
+        name: username,
+        email: user.email,
+      });
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      alert("Signup failed: " + error.message);
+    }
+  };
+
+  const handleSocialLogin = async (provider: "google" | "facebook") => {
+    console.log("Social login with:", provider);
+    const user = {
+      id: `${provider}_id`,
+      name: provider === "google" ? "Google User" : "Facebook User",
+      email: `user@${provider}.com`,
+    };
+    handleAuthSuccess(user);
   };
 
   return (
@@ -142,8 +199,10 @@ export const Header: React.FC<HeaderProps> = ({
         <AuthModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
-          onAuthSuccess={handleAuthSuccess}
           initialMode={authMode}
+          onLogin={handleLogin}
+          onSignup={handleSignup}
+          onSocialLogin={handleSocialLogin}
         />
       )}
     </>

@@ -1,18 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { Header } from './components/Header';
-import { HomePage } from './components/HomePage';
-import { SearchResultsPage } from './components/SearchResultsPage';
-import { BookDetailPage } from './components/BookDetailPage';
-import { ListingDashboardPage } from './components/ListingDashboardPage';
-import { Footer } from './components/Footer';
-import { SearchFilters } from './components/SearchBar';
-import { Book } from './types';
-import { getCurrentUser, isTokenValid, refreshTokenIfNeeded } from './utils/auth';
+import React, { useState, useEffect } from "react";
+import { Header } from "./components/Header";
+import { HomePage } from "./components/HomePage";
+import { SearchResultsPage } from "./components/SearchResultsPage";
+import { BookDetailPage } from "./components/BookDetailPage";
+import { ListingDashboardPage } from "./components/ListingDashboardPage";
+import { Footer } from "./components/Footer";
+import { SearchFilters } from "./components/SearchBar";
+import { Book } from "./types";
+import {
+  getCurrentUser,
+  isTokenValid,
+  refreshTokenIfNeeded,
+} from "./utils/firebaseAuth";
 
 export function App() {
-  const [currentView, setCurrentView] = useState<'home' | 'search' | 'bookDetail' | 'dashboard'>('home');
+  const [currentView, setCurrentView] = useState<
+    "home" | "search" | "bookDetail" | "dashboard"
+  >("home");
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -42,66 +48,73 @@ export function App() {
     setSearchQuery(query);
     setSearchFilters(filters);
     // Always navigate to search view when search is triggered
-    setCurrentView('search');
+    setCurrentView("search");
   };
 
   const handleBookClick = (book: Book) => {
     setSelectedBook(book);
-    setCurrentView('bookDetail');
+    setCurrentView("bookDetail");
   };
 
   const handleBackToHome = () => {
-    setCurrentView('home');
+    setCurrentView("home");
     setSelectedBook(null);
-    setSearchQuery('');
+    setSearchQuery("");
     setSearchFilters({});
   };
 
   const handleBackToSearch = () => {
-    setCurrentView('search');
+    setCurrentView("search");
     setSelectedBook(null);
   };
 
   const handleBackToDashboard = () => {
-    setCurrentView('dashboard');
+    setCurrentView("dashboard");
     setSelectedBook(null);
   };
 
   const handleAuthSuccess = (user: any) => {
     setCurrentUser(user);
     // Navigate to dashboard after successful login/registration
-    setCurrentView('dashboard');
+    setCurrentView("dashboard");
   };
 
   const handleUserChange = (user: any) => {
     setCurrentUser(user);
     if (!user) {
       // User logged out, go back to home
-      setCurrentView('home');
+      setCurrentView("home");
     }
   };
 
   const handleListBookClick = () => {
     // This would open the ListBookModal
-    console.log('List book clicked');
+    console.log("List book clicked");
   };
 
   // Render book detail page
-  if (currentView === 'bookDetail' && selectedBook) {
+  if (currentView === "bookDetail" && selectedBook) {
     return (
       <div className="min-h-screen bg-neutral-50 flex flex-col">
-        <Header 
-          currentUser={currentUser} 
+        <Header
+          currentUser={currentUser}
           onSearch={handleSearch}
           onBookSelect={handleBookClick}
-          onAuthSuccess={handleAuthSuccess}
           onUserChange={handleUserChange}
         />
         <main className="flex-1">
-          <BookDetailPage 
+          <BookDetailPage
             book={selectedBook}
-            onBack={currentUser ? handleBackToDashboard : (searchQuery || Object.keys(searchFilters).length > 0 ? handleBackToSearch : handleBackToHome)}
-            onSwapClick={(book) => console.log('Swap clicked for book:', book)}
+            onBack={
+              currentUser
+                ? handleBackToDashboard
+                : searchQuery || Object.keys(searchFilters).length > 0
+                ? handleBackToSearch
+                : handleBackToHome
+            }
+            onExchangeClick={(book) =>
+              console.log("Swap clicked for book:", book)
+            }
           />
         </main>
         <Footer />
@@ -110,18 +123,17 @@ export function App() {
   }
 
   // Render search results page
-  if (currentView === 'search') {
+  if (currentView === "search") {
     return (
       <div className="min-h-screen bg-neutral-50 flex flex-col">
-        <Header 
-          currentUser={currentUser} 
+        <Header
+          currentUser={currentUser}
           onSearch={handleSearch}
           onBookSelect={handleBookClick}
-          onAuthSuccess={handleAuthSuccess}
           onUserChange={handleUserChange}
         />
         <main className="flex-1">
-          <SearchResultsPage 
+          <SearchResultsPage
             initialQuery={searchQuery}
             initialFilters={searchFilters}
             onBookClick={handleBookClick}
@@ -134,7 +146,7 @@ export function App() {
   }
 
   // Render dashboard page for logged-in users
-  if (currentView === 'dashboard' && currentUser) {
+  if (currentView === "dashboard" && currentUser) {
     return (
       <div className="min-h-screen bg-neutral-50 flex flex-col">
         <main className="flex-1">
@@ -153,15 +165,14 @@ export function App() {
   // Render home page
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
-      <Header 
-        currentUser={currentUser} 
+      <Header
+        currentUser={currentUser}
         onSearch={handleSearch}
         onBookSelect={handleBookClick}
-        onAuthSuccess={handleAuthSuccess}
         onUserChange={handleUserChange}
       />
       <main className="flex-1">
-        <HomePage 
+        <HomePage
           onSearch={handleSearch}
           onBookClick={handleBookClick}
           currentUser={currentUser}
