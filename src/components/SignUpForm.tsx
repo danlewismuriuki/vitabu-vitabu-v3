@@ -426,15 +426,6 @@ const SignUpForm: React.FC<SignUpFormProps> = ({
   // Form Screen
   const renderForm = () => (
     <div className="space-y-6 p-6">
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center space-x-2 mb-4">
-          <BookOpen className="h-8 w-8 text-blue-500" />
-          <h1 className="text-2xl font-bold">Vitabu Vitabu</h1>
-        </div>
-        <h2 className="text-xl font-semibold mb-2">Create Your Account</h2>
-        <p className="text-gray-600">Just a few details to get started</p>
-      </div>
-
       <form onSubmit={onSignupSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -558,21 +549,6 @@ const SignUpForm: React.FC<SignUpFormProps> = ({
   // Verification Screen
   const renderVerification = () => (
     <div className="space-y-6 p-6">
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center space-x-2 mb-4">
-          <BookOpen className="h-8 w-8 text-blue-500" />
-          <h1 className="text-2xl font-bold">Vitabu Vitabu</h1>
-        </div>
-        <h2 className="text-xl font-semibold mb-2">
-          {signupMethod === "phone" ? "Verify Your Phone" : "Check Your Email"}
-        </h2>
-        <p className="text-gray-600">
-          {signupMethod === "phone"
-            ? `We sent a code to ${formData.emailOrPhone}`
-            : `We sent a verification link to ${formData.emailOrPhone}`}
-        </p>
-      </div>
-
       {signupMethod === "phone" ? (
         <form onSubmit={onVerification} className="space-y-4">
           <div>
