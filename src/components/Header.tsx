@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Bell, BookOpen, Menu } from "lucide-react";
 import { SearchBar, SearchFilters } from "./SearchBar";
-import { AuthModal } from "./AuthModal";
+import AuthFlow from "./AuthFlow";
 import { AuthButton } from "./AuthButton";
 import { Book } from "../types";
 import { updateProfile } from "firebase/auth";
@@ -196,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Auth Modal */}
       {showAuthModal && (
-        <AuthModal
+        <AuthFlow
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
           initialMode={authMode}

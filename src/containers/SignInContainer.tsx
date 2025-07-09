@@ -1,20 +1,22 @@
+// src/containers/SignInContainer.tsx
 import React, { useState, useEffect } from "react";
-import {
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  GoogleAuthProvider,
-  FacebookAuthProvider,
-  setPersistence,
-  browserLocalPersistence,
-  browserSessionPersistence,
-} from "firebase/auth";
-import { auth } from "../firebase";
 import SignInForm from "../components/SignInForm";
-import { useNavigate } from "react-router-dom";
 
-const SignInContainer = () => {
-  const navigate = useNavigate();
+interface SignInContainerProps {
+  onLogin: (
+    emailOrPhone: string,
+    password: string,
+    rememberMe: boolean
+  ) => Promise<void>;
+  onSocialLogin: (provider: "google" | "facebook") => Promise<void>;
+  onSwitchMode: () => void;
+}
 
+const SignInContainer: React.FC<SignInContainerProps> = ({
+  onLogin,
+  onSocialLogin,
+  onSwitchMode,
+}) => {
   const [formData, setFormData] = useState({ emailOrPhone: "", password: "" });
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -50,25 +52,13 @@ const SignInContainer = () => {
     }
   };
 
-  const onLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrors({});
 
     try {
-      // Set auth persistence BEFORE signing in
-      await setPersistence(
-        auth,
-        rememberMe ? browserLocalPersistence : browserSessionPersistence
-      );
-
-      const userCred = await signInWithEmailAndPassword(
-        auth,
-        formData.emailOrPhone,
-        formData.password
-      );
-
-      const user = userCred.user;
+      await onLogin(formData.emailOrPhone, formData.password, rememberMe);
 
       if (rememberMe) {
         localStorage.setItem(
@@ -78,8 +68,6 @@ const SignInContainer = () => {
           ])
         );
       }
-
-      navigate("/dashboard");
     } catch (err: any) {
       console.error(err);
       setErrors({ general: err.message || "Login failed" });
@@ -88,30 +76,13 @@ const SignInContainer = () => {
     }
   };
 
-  const onTogglePassword = () => setShowPassword((prev) => !prev);
-
-  const onRememberMeChange = (checked: boolean) => setRememberMe(checked);
-
-  const onSocialLogin = async (provider: "google" | "facebook") => {
-    const selectedProvider =
-      provider === "google"
-        ? new GoogleAuthProvider()
-        : new FacebookAuthProvider();
-
+  const handleSocialLogin = async (provider: "google" | "facebook") => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-
-      await setPersistence(
-        auth,
-        rememberMe ? browserLocalPersistence : browserSessionPersistence
-      );
-
-      await signInWithPopup(auth, selectedProvider);
-
-      navigate("/dashboard");
-    } catch (error: any) {
-      console.error(error);
-      setErrors({ general: error.message || "Social login failed" });
+      await onSocialLogin(provider);
+    } catch (err: any) {
+      console.error(err);
+      setErrors({ general: err.message || "Social login failed" });
     } finally {
       setIsLoading(false);
     }
@@ -128,13 +99,13 @@ const SignInContainer = () => {
       isLoading={isLoading}
       showPassword={showPassword}
       onInputChange={onInputChange}
-      onLogin={onLogin}
-      onTogglePassword={onTogglePassword}
-      onRememberMeChange={onRememberMeChange}
-      onSocialLogin={onSocialLogin}
+      onLogin={handleLogin}
+      onTogglePassword={() => setShowPassword((prev) => !prev)}
+      onRememberMeChange={setRememberMe}
+      onSocialLogin={handleSocialLogin}
       onUsernameDropdownToggle={setShowUsernameDropdown}
+      onSwitchMode={onSwitchMode}
     />
   );
 };
-
 export default SignInContainer;
