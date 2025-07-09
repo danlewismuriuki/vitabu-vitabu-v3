@@ -408,18 +408,6 @@ const SignUpForm: React.FC<SignUpFormProps> = ({
           Facebook
         </button>
       </div>
-
-      <div className="text-center text-sm mt-6">
-        <p className="text-gray-600">
-          Already have an account?{" "}
-          <button
-            onClick={onSwitchToLogin}
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Sign in
-          </button>
-        </p>
-      </div>
     </div>
   );
 
