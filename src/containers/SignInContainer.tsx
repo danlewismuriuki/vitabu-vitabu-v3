@@ -57,6 +57,29 @@ const SignInContainer: React.FC<SignInContainerProps> = ({
     setIsLoading(true);
     setErrors({});
 
+    // Optional validation
+    const newErrors: Record<string, string> = {};
+    if (!formData.emailOrPhone) {
+      newErrors.emailOrPhone = "Please enter your email or phone.";
+    } else if (
+      !formData.emailOrPhone.includes("@") &&
+      !formData.emailOrPhone.startsWith("+254") &&
+      !formData.emailOrPhone.startsWith("07") &&
+      !formData.emailOrPhone.startsWith("01")
+    ) {
+      newErrors.emailOrPhone = "Enter a valid email or Kenyan phone number.";
+    }
+
+    if (!formData.password || formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       await onLogin(formData.emailOrPhone, formData.password, rememberMe);
 
@@ -69,8 +92,16 @@ const SignInContainer: React.FC<SignInContainerProps> = ({
         );
       }
     } catch (err: any) {
-      console.error(err);
-      setErrors({ general: err.message || "Login failed" });
+      console.error("Login error:", err);
+      if (err.code === "auth/invalid-email") {
+        setErrors({ emailOrPhone: "Please enter a valid email address." });
+      } else if (err.code === "auth/user-not-found") {
+        setErrors({ emailOrPhone: "No account found with this email." });
+      } else if (err.code === "auth/wrong-password") {
+        setErrors({ password: "Incorrect password." });
+      } else {
+        setErrors({ general: "Login failed. Please try again." });
+      }
     } finally {
       setIsLoading(false);
     }

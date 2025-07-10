@@ -122,6 +122,30 @@ export const HomePage: React.FC<HomePageProps> = ({
     setShowAuthModal(false); // Close modal after login
   };
 
+  // const handleSignup = async (
+  //   username: string,
+  //   email: string,
+  //   password: string
+  // ) => {
+  //   try {
+  //     const userCred = await createUserWithEmailAndPassword(
+  //       auth,
+  //       email,
+  //       password
+  //     );
+  //     await updateProfile(userCred.user, { displayName: username });
+  //     console.log("User signed up:", userCred.user);
+  //     setShowAuthModal(false); // Close modal after signup
+  //   } catch (error: any) {
+  //     if (error.code === "auth/email-already-in-use") {
+  //       alert("🚫 This email is already registered. Try logging in instead.");
+  //     } else {
+  //       console.error("Signup failed:", error);
+  //       alert("❌ Signup failed. Please try again.");
+  //     }
+  //   }
+  // };
+
   const handleSignup = async (
     username: string,
     email: string,

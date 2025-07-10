@@ -1,125 +1,3 @@
-// import React, { useState } from "react";
-// import SignUpForm from "../components/SignUpForm";
-
-// interface SignUpContainerProps {
-//   onSignup: (
-//     username: string,
-//     email: string,
-//     password: string
-//   ) => Promise<void>;
-//   onSocialLogin: (provider: "google" | "facebook") => Promise<void>;
-// }
-
-// const SignUpContainer: React.FC<SignUpContainerProps> = ({
-//   onSignup,
-//   onSocialLogin,
-// }) => {
-//   const [formData, setFormData] = useState({
-//     username: "",
-//     emailOrPhone: "",
-//     password: "",
-//   });
-
-//   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-//   const [isLoading, setIsLoading] = useState(false);
-//   const [showPassword, setShowPassword] = useState(false);
-
-//   const [validation, setValidation] = useState({
-//     username: false,
-//     email: false,
-//     password: false,
-//   });
-
-//   const [passwordRequirements, setPasswordRequirements] = useState({
-//     length: false,
-//     uppercase: false,
-//     lowercase: false,
-//     number: false,
-//     special: false,
-//   });
-
-//   const onInputChange = (field: string, value: string) => {
-//     setFormData((prev) => ({ ...prev, [field]: value }));
-//     setErrors((prev) => ({ ...prev, [field]: "" }));
-
-//     if (field === "username") {
-//       const isValid = value.trim().length >= 3;
-//       setValidation((prev) => ({ ...prev, username: isValid }));
-//     }
-
-//     if (field === "emailOrPhone") {
-//       const isValid = value.includes("@");
-//       setValidation((prev) => ({ ...prev, email: isValid }));
-//     }
-
-//     if (field === "password") {
-//       const length = value.length >= 6;
-//       const uppercase = /[A-Z]/.test(value);
-//       const lowercase = /[a-z]/.test(value);
-//       const number = /\d/.test(value);
-//       const special = /[!@#$%^&*(),.?":{}|<>]/.test(value);
-
-//       setValidation((prev) => ({ ...prev, password: length }));
-
-//       setPasswordRequirements({
-//         length,
-//         uppercase,
-//         lowercase,
-//         number,
-//         special,
-//       });
-//     }
-//   };
-
-//   const onTogglePassword = () => setShowPassword((prev) => !prev);
-
-//   const handleSignup = async (e: React.FormEvent) => {
-//     e.preventDefault();
-//     setIsLoading(true);
-//     setErrors({});
-
-//     const { username, emailOrPhone, password } = formData;
-
-//     try {
-//       await onSignup(username, emailOrPhone, password);
-//     } catch (error: any) {
-//       console.error("Signup error:", error);
-//       setErrors({ general: error.message || "Signup failed" });
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
-//   const handleSocialLogin = async (provider: "google" | "facebook") => {
-//     try {
-//       setIsLoading(true);
-//       await onSocialLogin(provider);
-//     } catch (error: any) {
-//       console.error("Social signup error:", error);
-//       setErrors({ general: error.message || "Social signup failed" });
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
-//   return (
-//     <SignUpForm
-//       formData={formData}
-//       onInputChange={onInputChange}
-//       onSignup={handleSignup}
-//       isLoading={isLoading}
-//       errors={errors}
-//       validation={validation}
-//       passwordRequirements={passwordRequirements}
-//       showPassword={showPassword}
-//       onTogglePassword={onTogglePassword}
-//       onSocialLogin={handleSocialLogin}
-//     />
-//   );
-// };
-
-// export default SignUpContainer;
-
 // src/containers/SignUpContainer.tsx
 import React, { useState } from "react";
 import SignUpForm from "../components/SignUpForm";
@@ -131,7 +9,7 @@ interface SignUpContainerProps {
     password: string
   ) => Promise<void>;
   onVerify: (otp: string) => Promise<void>;
-  onSocialSignup: (provider: "google" | "facebook") => Promise<void>;
+  onSocialLogin: (provider: "google" | "facebook") => Promise<void>;
   onComplete: () => void;
   onSwitchToLogin: () => void;
 }
@@ -139,7 +17,7 @@ interface SignUpContainerProps {
 const SignUpContainer: React.FC<SignUpContainerProps> = ({
   onSignup,
   onVerify,
-  onSocialSignup,
+  onSocialLogin,
   onComplete,
   onSwitchToLogin,
 }) => {
@@ -207,8 +85,15 @@ const SignUpContainer: React.FC<SignUpContainerProps> = ({
         formData.password
       );
       setStep("verification");
-    } catch (err) {
-      setErrors({ general: "Signup failed. Please try again." });
+    } catch (err: any) {
+      if (err.code === "auth/email-already-in-use") {
+        setErrors({
+          emailOrPhone: "This email is already in use. Try logging in.",
+        });
+      } else {
+        setErrors({ general: "Signup failed. Please try again." });
+        console.error("Signup error:", err);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -236,7 +121,7 @@ const SignUpContainer: React.FC<SignUpContainerProps> = ({
   const handleSocialSignup = async (provider: "google" | "facebook") => {
     setIsLoading(true);
     try {
-      await onSocialSignup(provider);
+      await onSocialLogin(provider);
       onComplete();
     } catch (err) {
       setErrors({ general: "Social signup failed. Please try again." });

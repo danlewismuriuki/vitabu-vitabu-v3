@@ -5,6 +5,8 @@ import AuthFlow from "./AuthFlow";
 import { AuthButton } from "./AuthButton";
 import { Book } from "../types";
 import { updateProfile } from "firebase/auth";
+import { logOut } from "../utils/firebaseAuth";
+import { loginWithGoogle, loginWithFacebook } from "../utils/firebaseAuth";
 
 import {
   getCurrentUser,
@@ -63,9 +65,14 @@ export const Header: React.FC<HeaderProps> = ({
     console.log("User authenticated:", newUser);
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    onUserChange?.(null);
+  const handleLogout = async () => {
+    try {
+      await logOut();
+      setUser(null);
+      onUserChange?.(null);
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
   };
 
   const handleAuthClick = (mode: "login" | "signup") => {
@@ -117,13 +124,23 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const handleSocialLogin = async (provider: "google" | "facebook") => {
-    console.log("Social login with:", provider);
-    const user = {
-      id: `${provider}_id`,
-      name: provider === "google" ? "Google User" : "Facebook User",
-      email: `user@${provider}.com`,
-    };
-    handleAuthSuccess(user);
+    try {
+      const userCredential =
+        provider === "google"
+          ? await loginWithGoogle()
+          : await loginWithFacebook();
+
+      const user = userCredential.user;
+
+      handleAuthSuccess({
+        id: user.uid,
+        name: user.displayName || user.email,
+        email: user.email,
+      });
+    } catch (error: any) {
+      console.error("Social login error:", error);
+      alert("Social login failed: " + error.message);
+    }
   };
 
   return (
