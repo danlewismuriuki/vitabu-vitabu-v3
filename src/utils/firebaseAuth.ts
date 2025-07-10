@@ -52,11 +52,16 @@ export const loginWithFacebook = async (): Promise<UserCredential> => {
 
 // 🔐 Logout
 export const logOut = async (): Promise<void> => {
-  await signOut(auth);
-
+  // Clear localStorage first
   localStorage.removeItem("vitabu_auth_token");
   localStorage.removeItem("vitabu_token_expiry");
   localStorage.removeItem("vitabu_user");
+  
+  // Clear sessionStorage as well
+  sessionStorage.removeItem("vitabu_session_start");
+  
+  // Sign out from Firebase
+  await signOut(auth);
 };
 
 // ✅ Get the current user from Firebase Auth
@@ -70,6 +75,7 @@ export const getCurrentUser = () => {
     id: user.uid,
     name: user.displayName || user.email,
     email: user.email,
+    profilePicture: user.photoURL || null,
   };
 };
 

@@ -1,6 +1,5 @@
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
-import { setupFirebaseAuth } from "./utils/firebaseAuth";
 
 import React, { useState, useEffect } from "react";
 import { Header } from "./components/Header";
@@ -11,11 +10,6 @@ import { ListingDashboardPage } from "./components/ListingDashboardPage";
 import { Footer } from "./components/Footer";
 import { SearchFilters } from "./components/SearchBar";
 import { Book } from "./types";
-import {
-  getCurrentUser,
-  isTokenValid,
-  refreshTokenIfNeeded,
-} from "./utils/firebaseAuth";
 
 export function App() {
   const [currentView, setCurrentView] = useState<
@@ -25,30 +19,30 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
       if (user) {
+        const normalizedUser = {
+          id: user.uid,
+          name: user.displayName || user.email,
+          email: user.email,
+          profilePicture: user.photoURL || null,
+          role: "buyer",
+        };
+        setCurrentUser(normalizedUser);
         setCurrentView("dashboard");
       } else {
+        setCurrentUser(null);
         setCurrentView("home");
       }
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  // Auto-refresh token periodically
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (currentUser && isTokenValid()) {
-        refreshTokenIfNeeded();
-      }
-    }, 5 * 60 * 1000); // Check every 5 minutes
-
-    return () => clearInterval(interval);
-  }, [currentUser]);
 
   const handleSearch = (query: string, filters: SearchFilters) => {
     setSearchQuery(query);
@@ -79,11 +73,6 @@ export function App() {
     setSelectedBook(null);
   };
 
-  const handleAuthSuccess = (user: any) => {
-    setCurrentUser(user);
-    // Navigate to dashboard after successful login/registration
-    setCurrentView("dashboard");
-  };
 
   const handleUserChange = (user: any) => {
     setCurrentUser(user);
@@ -98,6 +87,17 @@ export function App() {
     console.log("List book clicked");
   };
 
+  // Show loading spinner while checking auth state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto mb-4"></div>
+          <p className="text-neutral-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
   // Render book detail page
   if (currentView === "bookDetail" && selectedBook) {
     return (

@@ -9,11 +9,11 @@ import { logOut } from "../utils/firebaseAuth";
 import { loginWithGoogle, loginWithFacebook } from "../utils/firebaseAuth";
 
 import {
-  getCurrentUser,
-  isTokenValid,
   logIn,
   signUp,
 } from "../utils/firebaseAuth";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../firebase";
 
 interface HeaderProps {
   currentUser?: any;
@@ -32,36 +32,37 @@ export const Header: React.FC<HeaderProps> = ({
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [user, setUser] = useState(currentUser);
 
-  // useEffect(() => {
-  //   console.log("🧠 Checking for existing session...");
-
-  //   if (!user && isTokenValid()) {
-  //     const existingUser = getCurrentUser();
-  //     console.log("🔥 Found existing user:", existingUser);
-
-  //     if (existingUser) {
-  //       setUser(existingUser);
-  //       onUserChange?.(existingUser);
-  //     }
-  //   }
-  // }, [user, onUserChange]);
-
-  // useEffect(() => {
-  //   const existingUser = getCurrentUser();
-  //   if (existingUser) {
-  //     setUser(existingUser);
-  //     onUserChange?.(existingUser);
-  //   }
-  // }, []);
-
+  // Listen to Firebase auth state changes
   useEffect(() => {
-    const storedUser = localStorage.getItem("vitabu_user");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      onUserChange?.(parsedUser);
-    }
-  }, []);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        // User is signed in
+        const normalizedUser = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email,
+          email: firebaseUser.email,
+          profilePicture: firebaseUser.photoURL || null,
+          role: "buyer", // default role
+        };
+        setUser(normalizedUser);
+        onUserChange?.(normalizedUser);
+        
+        // Persist to localStorage for consistency
+        localStorage.setItem("vitabu_user", JSON.stringify(normalizedUser));
+      } else {
+        // User is signed out
+        setUser(null);
+        onUserChange?.(null);
+        
+        // Clear localStorage
+        localStorage.removeItem("vitabu_user");
+        localStorage.removeItem("vitabu_auth_token");
+        localStorage.removeItem("vitabu_token_expiry");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [onUserChange]);
 
   // Update user when prop changes
   useEffect(() => {
@@ -98,8 +99,7 @@ export const Header: React.FC<HeaderProps> = ({
   const handleLogout = async () => {
     try {
       await logOut();
-      setUser(null);
-      onUserChange?.(null);
+      // Firebase auth state change will handle the rest
     } catch (err) {
       console.error("Logout error:", err);
     }
@@ -119,11 +119,8 @@ export const Header: React.FC<HeaderProps> = ({
       const userCredential = await logIn(email, password, rememberMe);
       const user = userCredential.user;
 
-      handleAuthSuccess({
-        id: user.uid,
-        name: user.displayName || user.email,
-        email: user.email,
-      });
+      // Firebase auth state change will handle the rest
+      setShowAuthModal(false);
     } catch (error: any) {
       console.error("Login error:", error);
       alert("Login failed: " + error.message);
@@ -142,11 +139,8 @@ export const Header: React.FC<HeaderProps> = ({
       // Optionally set display name
       await updateProfile(user, { displayName: username });
 
-      handleAuthSuccess({
-        id: user.uid,
-        name: username,
-        email: user.email,
-      });
+      // Firebase auth state change will handle the rest
+      setShowAuthModal(false);
     } catch (error: any) {
       console.error("Signup error:", error);
       alert("Signup failed: " + error.message);
@@ -162,11 +156,8 @@ export const Header: React.FC<HeaderProps> = ({
 
       const user = userCredential.user;
 
-      handleAuthSuccess({
-        id: user.uid,
-        name: user.displayName || user.email,
-        email: user.email,
-      });
+      // Firebase auth state change will handle the rest
+      setShowAuthModal(false);
     } catch (error: any) {
       console.error("Social login error:", error);
       alert("Social login failed: " + error.message);

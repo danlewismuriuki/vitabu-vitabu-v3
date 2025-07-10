@@ -12,7 +12,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
   onAuthClick,
   onLogout,
 }) => {
-  console.log("🔍 AuthButton component is rendering");
+  console.log("🔍 AuthButton component is rendering", { currentUser });
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -26,20 +26,21 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    if (showDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showDropdown]);
 
   const handleLogout = () => {
-    // Clear auth data
-    localStorage.removeItem("vitabu_auth_token");
-    localStorage.removeItem("vitabu_token_expiry");
-    localStorage.removeItem("vitabu_user");
-
     setShowDropdown(false);
     onLogout();
   };
 
+  const handleDropdownToggle = () => {
+    console.log("🔍 Dropdown toggle clicked", { showDropdown });
+    setShowDropdown(!showDropdown);
+  };
   if (!currentUser) {
     return (
       <div className="flex space-x-3">
@@ -47,7 +48,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
           onClick={() => onAuthClick("login")}
           className="text-neutral-600 hover:text-primary-700 font-medium px-4 py-2 rounded-lg hover:bg-neutral-100 transition-colors"
         >
-          Login In
+          Log In
         </button>
         <button
           onClick={() => onAuthClick("signup")}
@@ -62,7 +63,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setShowDropdown(!showDropdown)}
+        onClick={handleDropdownToggle}
         className="flex items-center space-x-3 p-2 rounded-lg hover:bg-neutral-100 transition-colors"
       >
         <div className="text-right hidden sm:block">
