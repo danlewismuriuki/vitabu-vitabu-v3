@@ -124,7 +124,11 @@ const SignUpContainer: React.FC<SignUpContainerProps> = ({
       await onSocialLogin(provider);
       onComplete();
     } catch (err) {
-      setErrors({ general: "Social signup failed. Please try again." });
+      if ((err as any).code === 'auth/popup-blocked') {
+        setErrors({ general: "Social signup failed because your browser blocked the popup. Please enable popups for this site in your browser settings and try again." });
+      } else {
+        setErrors({ general: "Social signup failed. Please try again." });
+      }
     } finally {
       setIsLoading(false);
     }

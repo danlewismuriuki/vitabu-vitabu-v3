@@ -160,7 +160,11 @@ export const Header: React.FC<HeaderProps> = ({
       setShowAuthModal(false);
     } catch (error: any) {
       console.error("Social login error:", error);
-      alert("Social login failed: " + error.message);
+      if (error.code === 'auth/popup-blocked') {
+        alert("Social login failed because your browser blocked the popup. Please enable popups for this site in your browser settings and try again.");
+      } else {
+        alert("Social login failed: " + error.message);
+      }
     }
   };
 
