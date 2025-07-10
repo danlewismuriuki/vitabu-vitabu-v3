@@ -52,11 +52,26 @@ export const loginWithFacebook = async (): Promise<UserCredential> => {
 
 // 🔐 Logout
 export const logOut = async (): Promise<void> => {
-  return await signOut(auth);
+  await signOut(auth);
+
+  localStorage.removeItem("vitabu_auth_token");
+  localStorage.removeItem("vitabu_token_expiry");
+  localStorage.removeItem("vitabu_user");
 };
 
 // ✅ Get the current user from Firebase Auth
-export const getCurrentUser = () => auth.currentUser;
+// export const getCurrentUser = () => auth.currentUser;
+
+export const getCurrentUser = () => {
+  const user = auth.currentUser;
+  if (!user) return null;
+
+  return {
+    id: user.uid,
+    name: user.displayName || user.email,
+    email: user.email,
+  };
+};
 
 // ✅ Get and store the token in localStorage or memory
 export const getIdToken = async (): Promise<string | null> => {
@@ -78,6 +93,15 @@ export const refreshTokenIfNeeded = async () => {
   const user = auth.currentUser;
   if (user) {
     await user.getIdToken(true);
+  }
+};
+
+export const setupFirebaseAuth = async () => {
+  try {
+    await setPersistence(auth, browserSessionPersistence);
+    console.log("✅ Firebase Auth set to session persistence");
+  } catch (err) {
+    console.error("❌ Failed to set Firebase persistence", err);
   }
 };
 

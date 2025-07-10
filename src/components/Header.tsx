@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Bell, BookOpen, Menu } from "lucide-react";
 import { SearchBar, SearchFilters } from "./SearchBar";
-import { AuthModal } from "./AuthModal";
+import AuthFlow from "./AuthFlow";
 import { AuthButton } from "./AuthButton";
 import { Book } from "../types";
 import { updateProfile } from "firebase/auth";
+import { logOut } from "../utils/firebaseAuth";
+import { loginWithGoogle, loginWithFacebook } from "../utils/firebaseAuth";
 
 import {
   getCurrentUser,
@@ -30,16 +32,36 @@ export const Header: React.FC<HeaderProps> = ({
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [user, setUser] = useState(currentUser);
 
-  // Check for existing auth on mount
+  // useEffect(() => {
+  //   console.log("🧠 Checking for existing session...");
+
+  //   if (!user && isTokenValid()) {
+  //     const existingUser = getCurrentUser();
+  //     console.log("🔥 Found existing user:", existingUser);
+
+  //     if (existingUser) {
+  //       setUser(existingUser);
+  //       onUserChange?.(existingUser);
+  //     }
+  //   }
+  // }, [user, onUserChange]);
+
+  // useEffect(() => {
+  //   const existingUser = getCurrentUser();
+  //   if (existingUser) {
+  //     setUser(existingUser);
+  //     onUserChange?.(existingUser);
+  //   }
+  // }, []);
+
   useEffect(() => {
-    if (!user && isTokenValid()) {
-      const existingUser = getCurrentUser();
-      if (existingUser) {
-        setUser(existingUser);
-        onUserChange?.(existingUser);
-      }
+    const storedUser = localStorage.getItem("vitabu_user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      onUserChange?.(parsedUser);
     }
-  }, [user, onUserChange]);
+  }, []);
 
   // Update user when prop changes
   useEffect(() => {
@@ -56,16 +78,31 @@ export const Header: React.FC<HeaderProps> = ({
     onBookSelect?.(book);
   };
 
-  const handleAuthSuccess = (newUser: any) => {
-    setUser(newUser);
-    onUserChange?.(newUser);
+  const handleAuthSuccess = (firebaseUser: any) => {
+    const normalizedUser = {
+      id: firebaseUser.uid,
+      name: firebaseUser.displayName || firebaseUser.email,
+      email: firebaseUser.email,
+      profilePicture: firebaseUser.photoURL || null,
+      role: "buyer", // optional: default role
+    };
+
+    setUser(normalizedUser);
+    onUserChange?.(normalizedUser);
     setShowAuthModal(false);
-    console.log("User authenticated:", newUser);
+
+    // Persist to localStorage for page reload
+    localStorage.setItem("vitabu_user", JSON.stringify(normalizedUser));
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    onUserChange?.(null);
+  const handleLogout = async () => {
+    try {
+      await logOut();
+      setUser(null);
+      onUserChange?.(null);
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
   };
 
   const handleAuthClick = (mode: "login" | "signup") => {
@@ -117,13 +154,23 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const handleSocialLogin = async (provider: "google" | "facebook") => {
-    console.log("Social login with:", provider);
-    const user = {
-      id: `${provider}_id`,
-      name: provider === "google" ? "Google User" : "Facebook User",
-      email: `user@${provider}.com`,
-    };
-    handleAuthSuccess(user);
+    try {
+      const userCredential =
+        provider === "google"
+          ? await loginWithGoogle()
+          : await loginWithFacebook();
+
+      const user = userCredential.user;
+
+      handleAuthSuccess({
+        id: user.uid,
+        name: user.displayName || user.email,
+        email: user.email,
+      });
+    } catch (error: any) {
+      console.error("Social login error:", error);
+      alert("Social login failed: " + error.message);
+    }
   };
 
   return (
@@ -196,7 +243,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Auth Modal */}
       {showAuthModal && (
-        <AuthModal
+        <AuthFlow
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
           initialMode={authMode}

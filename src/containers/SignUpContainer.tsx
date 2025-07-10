@@ -1,115 +1,130 @@
+// src/containers/SignUpContainer.tsx
 import React, { useState } from "react";
-import {
-  createUserWithEmailAndPassword,
-  updateProfile,
-  signInWithPopup,
-  GoogleAuthProvider,
-  FacebookAuthProvider,
-} from "firebase/auth";
-import { auth } from "../firebase";
 import SignUpForm from "../components/SignUpForm";
-import { useNavigate } from "react-router-dom";
 
-const SignUpContainer = () => {
-  const navigate = useNavigate();
+interface SignUpContainerProps {
+  onSignup: (
+    username: string,
+    emailOrPhone: string,
+    password: string
+  ) => Promise<void>;
+  onVerify: (otp: string) => Promise<void>;
+  onSocialLogin: (provider: "google" | "facebook") => Promise<void>;
+  onComplete: () => void;
+  onSwitchToLogin: () => void;
+}
 
+const SignUpContainer: React.FC<SignUpContainerProps> = ({
+  onSignup,
+  onVerify,
+  onSocialLogin,
+  onComplete,
+  onSwitchToLogin,
+}) => {
+  const [step, setStep] = useState<"intro" | "form" | "verification">("intro");
+  const [signupMethod, setSignupMethod] = useState<"email" | "phone" | null>(
+    null
+  );
   const [formData, setFormData] = useState({
     username: "",
     emailOrPhone: "",
     password: "",
+    otp: "",
   });
-
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [validation, setValidation] = useState({
-    username: false,
-    email: false,
-    password: false,
-  });
+  const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
+  const isValidPhone = (value: string) =>
+    /^\+?254[0-9]{9}$|^0[0-9]{9}$/.test(value);
 
-  const [passwordRequirements, setPasswordRequirements] = useState({
-    length: false,
-    uppercase: false,
-    lowercase: false,
-    number: false,
-    special: false,
-  });
-
-  const onInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => ({ ...prev, [field]: "" }));
-
-    if (field === "username") {
-      const isValid = value.trim().length >= 3;
-      setValidation((prev) => ({ ...prev, username: isValid }));
-    }
-
-    if (field === "emailOrPhone") {
-      const isValid = value.includes("@");
-      setValidation((prev) => ({ ...prev, email: isValid }));
-    }
-
-    if (field === "password") {
-      const length = value.length >= 6;
-      const uppercase = /[A-Z]/.test(value);
-      const lowercase = /[a-z]/.test(value);
-      const number = /\d/.test(value);
-      const special = /[!@#$%^&*(),.?":{}|<>]/.test(value);
-
-      setValidation((prev) => ({ ...prev, password: length }));
-
-      setPasswordRequirements({
-        length,
-        uppercase,
-        lowercase,
-        number,
-        special,
-      });
-    }
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
-  const onTogglePassword = () => setShowPassword((prev) => !prev);
+  const startSignup = () => {
+    setStep("form");
+  };
 
-  const onSocialLogin = async (provider: "google" | "facebook") => {
-    const selectedProvider =
-      provider === "google"
-        ? new GoogleAuthProvider()
-        : new FacebookAuthProvider();
+  const submitSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    // Validate form
+    const newErrors: Record<string, string> = {};
+    if (!formData.username || formData.username.length < 3) {
+      newErrors.username = "Username must be at least 3 characters";
+    }
+    if (!formData.emailOrPhone) {
+      newErrors.emailOrPhone = "Email or phone number is required";
+    } else if (
+      !isValidEmail(formData.emailOrPhone) &&
+      !isValidPhone(formData.emailOrPhone)
+    ) {
+      newErrors.emailOrPhone = "Please enter a valid email or phone number";
+    }
+    if (!formData.password || formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setIsLoading(false);
+      return;
+    }
+
+    // Determine signup method
+    const method = isValidEmail(formData.emailOrPhone) ? "email" : "phone";
+    setSignupMethod(method);
 
     try {
-      setIsLoading(true);
-      await signInWithPopup(auth, selectedProvider);
-      navigate("/dashboard");
-    } catch (error: any) {
-      console.error("Social signup error:", error);
-      setErrors({ general: error.message || "Social signup failed" });
+      await onSignup(
+        formData.username,
+        formData.emailOrPhone,
+        formData.password
+      );
+      setStep("verification");
+    } catch (err: any) {
+      if (err.code === "auth/email-already-in-use") {
+        setErrors({
+          emailOrPhone: "This email is already in use. Try logging in.",
+        });
+      } else {
+        setErrors({ general: "Signup failed. Please try again." });
+        console.error("Signup error:", err);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const onSignup = async (e: React.FormEvent) => {
+  const verifyAccount = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.otp || formData.otp.length !== 6) {
+      setErrors({ otp: "Please enter a valid 6-digit code" });
+      return;
+    }
+
     setIsLoading(true);
-    setErrors({});
-
     try {
-      const { emailOrPhone, password, username } = formData;
+      await onVerify(formData.otp);
+      onComplete();
+    } catch (err) {
+      setErrors({ otp: "Verification failed. Please try again." });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      const userCred = await createUserWithEmailAndPassword(
-        auth,
-        emailOrPhone,
-        password
-      );
-
-      await updateProfile(userCred.user, { displayName: username });
-
-      navigate("/dashboard");
-    } catch (error: any) {
-      console.error("Signup error:", error);
-      setErrors({ general: error.message || "Signup failed" });
+  const handleSocialSignup = async (provider: "google" | "facebook") => {
+    setIsLoading(true);
+    try {
+      await onSocialLogin(provider);
+      onComplete();
+    } catch (err) {
+      setErrors({ general: "Social signup failed. Please try again." });
     } finally {
       setIsLoading(false);
     }
@@ -117,16 +132,17 @@ const SignUpContainer = () => {
 
   return (
     <SignUpForm
+      step={step}
+      signupMethod={signupMethod}
       formData={formData}
-      onInputChange={onInputChange}
-      onSignup={onSignup}
-      isLoading={isLoading}
       errors={errors}
-      validation={validation}
-      passwordRequirements={passwordRequirements}
-      showPassword={showPassword}
-      onTogglePassword={onTogglePassword}
-      onSocialLogin={onSocialLogin}
+      isLoading={isLoading}
+      onInputChange={handleInputChange}
+      onSignupStart={startSignup}
+      onSignupSubmit={submitSignup}
+      onVerification={verifyAccount}
+      onSocialSignup={handleSocialSignup}
+      onSwitchToLogin={onSwitchToLogin}
     />
   );
 };

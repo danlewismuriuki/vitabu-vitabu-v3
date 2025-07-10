@@ -1,3 +1,7 @@
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./firebase";
+import { setupFirebaseAuth } from "./utils/firebaseAuth";
+
 import React, { useState, useEffect } from "react";
 import { Header } from "./components/Header";
 import { HomePage } from "./components/HomePage";
@@ -22,15 +26,17 @@ export function App() {
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  // Check for existing authentication on app load
   useEffect(() => {
-    if (isTokenValid()) {
-      const user = getCurrentUser();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
       if (user) {
-        setCurrentUser(user);
-        refreshTokenIfNeeded();
+        setCurrentView("dashboard");
+      } else {
+        setCurrentView("home");
       }
-    }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // Auto-refresh token periodically

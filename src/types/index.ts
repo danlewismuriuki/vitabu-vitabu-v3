@@ -10,6 +10,7 @@ export interface User {
   joinedDate: string;
   badges: Badge[];
   isVerified: boolean;
+  role?: 'seller' | 'buyer';
 }
 
 export interface Badge {
