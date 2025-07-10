@@ -1,5 +1,6 @@
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
+import { setupFirebaseAuth } from "./utils/firebaseAuth";
 
 import React, { useState, useEffect } from "react";
 import { Header } from "./components/Header";

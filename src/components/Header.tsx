@@ -32,16 +32,36 @@ export const Header: React.FC<HeaderProps> = ({
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [user, setUser] = useState(currentUser);
 
-  // Check for existing auth on mount
+  // useEffect(() => {
+  //   console.log("🧠 Checking for existing session...");
+
+  //   if (!user && isTokenValid()) {
+  //     const existingUser = getCurrentUser();
+  //     console.log("🔥 Found existing user:", existingUser);
+
+  //     if (existingUser) {
+  //       setUser(existingUser);
+  //       onUserChange?.(existingUser);
+  //     }
+  //   }
+  // }, [user, onUserChange]);
+
+  // useEffect(() => {
+  //   const existingUser = getCurrentUser();
+  //   if (existingUser) {
+  //     setUser(existingUser);
+  //     onUserChange?.(existingUser);
+  //   }
+  // }, []);
+
   useEffect(() => {
-    if (!user && isTokenValid()) {
-      const existingUser = getCurrentUser();
-      if (existingUser) {
-        setUser(existingUser);
-        onUserChange?.(existingUser);
-      }
+    const storedUser = localStorage.getItem("vitabu_user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      onUserChange?.(parsedUser);
     }
-  }, [user, onUserChange]);
+  }, []);
 
   // Update user when prop changes
   useEffect(() => {
@@ -58,11 +78,21 @@ export const Header: React.FC<HeaderProps> = ({
     onBookSelect?.(book);
   };
 
-  const handleAuthSuccess = (newUser: any) => {
-    setUser(newUser);
-    onUserChange?.(newUser);
+  const handleAuthSuccess = (firebaseUser: any) => {
+    const normalizedUser = {
+      id: firebaseUser.uid,
+      name: firebaseUser.displayName || firebaseUser.email,
+      email: firebaseUser.email,
+      profilePicture: firebaseUser.photoURL || null,
+      role: "buyer", // optional: default role
+    };
+
+    setUser(normalizedUser);
+    onUserChange?.(normalizedUser);
     setShowAuthModal(false);
-    console.log("User authenticated:", newUser);
+
+    // Persist to localStorage for page reload
+    localStorage.setItem("vitabu_user", JSON.stringify(normalizedUser));
   };
 
   const handleLogout = async () => {

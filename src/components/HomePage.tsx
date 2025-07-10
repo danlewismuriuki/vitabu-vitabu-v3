@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { logIn, signUp } from "../utils/firebaseAuth";
 import {
   DollarSign,
   BookOpen,
@@ -107,19 +108,29 @@ export const HomePage: React.FC<HomePageProps> = ({
     onSearch?.("", {});
   };
 
+  // const handleLogin = async (
+  //   email: string,
+  //   password: string,
+  //   rememberMe: boolean
+  // ) => {
+  //   await setPersistence(
+  //     auth,
+  //     rememberMe ? browserLocalPersistence : browserSessionPersistence
+  //   );
+
+  //   const userCred = await signInWithEmailAndPassword(auth, email, password);
+  //   console.log("User logged in:", userCred.user);
+  //   setShowAuthModal(false); // Close modal after login
+  // };
+
   const handleLogin = async (
     email: string,
     password: string,
     rememberMe: boolean
-  ) => {
-    await setPersistence(
-      auth,
-      rememberMe ? browserLocalPersistence : browserSessionPersistence
-    );
-
-    const userCred = await signInWithEmailAndPassword(auth, email, password);
+  ): Promise<void> => {
+    const userCred = await logIn(email, password, rememberMe);
     console.log("User logged in:", userCred.user);
-    setShowAuthModal(false); // Close modal after login
+    setShowAuthModal(false);
   };
 
   // const handleSignup = async (
@@ -127,38 +138,24 @@ export const HomePage: React.FC<HomePageProps> = ({
   //   email: string,
   //   password: string
   // ) => {
-  //   try {
-  //     const userCred = await createUserWithEmailAndPassword(
-  //       auth,
-  //       email,
-  //       password
-  //     );
-  //     await updateProfile(userCred.user, { displayName: username });
-  //     console.log("User signed up:", userCred.user);
-  //     setShowAuthModal(false); // Close modal after signup
-  //   } catch (error: any) {
-  //     if (error.code === "auth/email-already-in-use") {
-  //       alert("🚫 This email is already registered. Try logging in instead.");
-  //     } else {
-  //       console.error("Signup failed:", error);
-  //       alert("❌ Signup failed. Please try again.");
-  //     }
-  //   }
+  //   const userCred = await createUserWithEmailAndPassword(
+  //     auth,
+  //     email,
+  //     password
+  //   );
+  //   await updateProfile(userCred.user, { displayName: username });
+  //   console.log("User signed up:", userCred.user);
+  //   setShowAuthModal(false); // Close modal after signup
   // };
 
   const handleSignup = async (
     username: string,
     email: string,
     password: string
-  ) => {
-    const userCred = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
+  ): Promise<void> => {
+    const userCred = await signUp(email, password);
     await updateProfile(userCred.user, { displayName: username });
-    console.log("User signed up:", userCred.user);
-    setShowAuthModal(false); // Close modal after signup
+    setShowAuthModal(false);
   };
 
   const handleSocialLogin = async (provider: "google" | "facebook") => {
