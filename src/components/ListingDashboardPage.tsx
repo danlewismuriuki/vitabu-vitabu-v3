@@ -199,25 +199,20 @@ export const ListingDashboardPage: React.FC<ListingDashboardPageProps> = ({
                 <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-accent-500"></span>
               </button>
 
-              {/* Profile */}
-              <div className="flex items-center space-x-2">
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-medium text-primary-700">
-                    {currentUser.name}
-                  </p>
-                  <p className="text-xs text-neutral-500">
-                    {currentUser.role === "seller" ? "Seller" : "Buyer"}
-                  </p>
-                </div>
-                <div className="h-8 w-8 rounded-full bg-accent-100 flex items-center justify-center">
-                  <span className="text-sm font-semibold text-accent-600">
-                    {(currentUser?.name || currentUser?.email || "U")
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </span>
-                </div>
-              </div>
+              {/* Auth Button with Dropdown */}
+              <AuthButton
+                currentUser={currentUser}
+                onAuthClick={() => {}} // Not needed since user is already logged in
+                onLogout={async () => {
+                  try {
+                    const { logOut } = await import('../utils/firebaseAuth');
+                    await logOut();
+                    onUserChange?.(null);
+                  } catch (error) {
+                    console.error('Logout error:', error);
+                  }
+                }}
+              />
             </div>
           </div>
         </div>

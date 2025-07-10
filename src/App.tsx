@@ -161,6 +161,7 @@ export function App() {
             onBookClick={handleBookClick}
             onListBookClick={handleListBookClick}
             onSearch={handleSearch}
+            onUserChange={handleUserChange}
           />
         </main>
         <Footer />
