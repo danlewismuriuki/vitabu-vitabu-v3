@@ -193,7 +193,7 @@ export const Header: React.FC<HeaderProps> = ({
               <SearchBar
                 onSearch={handleSearch}
                 onResultSelect={handleResultSelect}
-                placeholder="Search for books by grade, subject, title..."
+                placeholder="Search books by grade, subject, title..."
                 showFilters={true}
                 className="w-full"
               />

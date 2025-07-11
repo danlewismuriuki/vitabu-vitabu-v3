@@ -1,21 +1,30 @@
 import React, { useState } from 'react';
 import { Book } from '../types';
-import { ArrowLeft, MapPin, Eye, Users, Clock, Star, Shield, ArrowRightLeft, Heart, Share2, MessageCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Eye, Users, Clock, Star, Shield, ArrowRightLeft, Heart, Share2, MessageCircle, ShoppingCart, Plus } from 'lucide-react';
 import { TrustBadge } from './TrustBadge';
 
 interface BookDetailPageProps {
   book: Book;
   onBack: () => void;
   onExchangeClick?: (book: Book) => void;
+  onBuyNow?: (book: Book) => void;
+  onAddToCart?: (book: Book) => void;
+  onAddToWishlist?: (book: Book) => void;
+  currentUser?: any;
 }
 
 export const BookDetailPage: React.FC<BookDetailPageProps> = ({ 
   book, 
   onBack, 
-  onExchangeClick 
+  onExchangeClick,
+  onBuyNow,
+  onAddToCart,
+  onAddToWishlist,
+  currentUser
 }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [showContactInfo, setShowContactInfo] = useState(false);
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [isInCart, setIsInCart] = useState(false);
 
   const getConditionColor = (condition: string) => {
     switch (condition) {
@@ -39,8 +48,24 @@ export const BookDetailPage: React.FC<BookDetailPageProps> = ({
 
   const savingsPercentage = Math.round(((book.originalPrice - book.price) / book.originalPrice) * 100);
 
+  const handleBuyNow = () => {
+    onBuyNow?.(book);
+  };
+
+  const handleAddToCart = () => {
+    setIsInCart(true);
+    onAddToCart?.(book);
+    // Show temporary feedback
+    setTimeout(() => setIsInCart(false), 2000);
+  };
+
+  const handleAddToWishlist = () => {
+    setIsInWishlist(!isInWishlist);
+    onAddToWishlist?.(book);
+  };
+
   return (
-    <div className="min-h-screen bg-kitenge-pattern">
+    <div className="min-h-screen" style={{ backgroundColor: '#EBF2F7' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
         <button
@@ -48,7 +73,7 @@ export const BookDetailPage: React.FC<BookDetailPageProps> = ({
           className="flex items-center space-x-2 text-neutral-600 hover:text-primary-700 mb-6"
         >
           <ArrowLeft className="h-5 w-5" />
-          <span>Back to search</span>
+          <span>Back to books</span>
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -92,8 +117,13 @@ export const BookDetailPage: React.FC<BookDetailPageProps> = ({
                   {book.title}
                 </h1>
                 <div className="flex items-center space-x-2">
-                  <button className="p-2 rounded-full hover:bg-neutral-100">
-                    <Heart className="h-5 w-5 text-neutral-600" />
+                    className={`p-2 rounded-full transition-colors ${
+                      isInWishlist 
+                        ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+                        : 'hover:bg-neutral-100 text-neutral-600'
+                    }`}
+                    onClick={handleAddToWishlist}
+                    <Heart className={`h-5 w-5 ${isInWishlist ? 'fill-current' : ''}`} />
                   </button>
                   <button className="p-2 rounded-full hover:bg-neutral-100">
                     <Share2 className="h-5 w-5 text-neutral-600" />
@@ -198,7 +228,7 @@ export const BookDetailPage: React.FC<BookDetailPageProps> = ({
             <div className="space-y-3">
               <div className="flex space-x-3">
                 <button 
-                  onClick={() => setShowContactInfo(true)}
+                  onClick={handleBuyNow}
                   className="flex-1 btn-primary text-lg py-4"
                 >
                   Buy Now - KES {book.price}
@@ -214,33 +244,34 @@ export const BookDetailPage: React.FC<BookDetailPageProps> = ({
                 )}
               </div>
               
-              <button className="w-full btn-secondary flex items-center justify-center space-x-2">
-                <MessageCircle className="h-5 w-5" />
-                <span>Message Seller</span>
-              </button>
+              <div className="flex space-x-3">
+                <button 
+                  onClick={handleAddToCart}
+                  disabled={isInCart}
+                  className="flex-1 btn-secondary flex items-center justify-center space-x-2 disabled:opacity-50"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  <span>{isInCart ? 'Added to Cart!' : 'Add to Cart'}</span>
+                </button>
+                <button className="flex-1 btn-secondary flex items-center justify-center space-x-2">
+                  <MessageCircle className="h-5 w-5" />
+                  <span>Message Seller</span>
+                </button>
+              </div>
             </div>
 
-            {/* Contact Info Modal */}
-            {showContactInfo && (
-              <div className="card bg-secondary-50 border border-secondary-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-poppins font-semibold text-secondary-700">Contact Information</h3>
-                  <button 
-                    onClick={() => setShowContactInfo(false)}
-                    className="text-neutral-500 hover:text-neutral-700"
-                  >
-                    ×
-                  </button>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <p><strong>Phone:</strong> +254 7XX XXX XXX</p>
-                  <p><strong>Location:</strong> {book.location}</p>
-                  <p className="text-secondary-600">
-                    💡 <strong>Tip:</strong> Meet in a safe, public place for the exchange
-                  </p>
-                </div>
+            {/* Trust & Safety */}
+            <div className="card bg-blue-50 border border-blue-200">
+              <h3 className="font-poppins font-semibold text-blue-800 mb-3">
+                🛡️ Safe Transaction Guaranteed
+              </h3>
+              <div className="space-y-2 text-sm text-blue-700">
+                <p>✓ Verified seller with trust badges</p>
+                <p>✓ Meet in safe, public locations</p>
+                <p>✓ No processing fees - keep it simple</p>
+                <p>✓ Community-driven platform</p>
               </div>
-            )}
+            </div>
           </div>
         </div>
 

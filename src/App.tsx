@@ -6,6 +6,9 @@ import { Header } from "./components/Header";
 import { HomePage } from "./components/HomePage";
 import { SearchResultsPage } from "./components/SearchResultsPage";
 import { BookDetailPage } from "./components/BookDetailPage";
+import { BooksPage } from "./components/BooksPage";
+import { CheckoutPage } from "./components/CheckoutPage";
+import { OrderSuccessPage } from "./components/OrderSuccessPage";
 import { ListingDashboardPage } from "./components/ListingDashboardPage";
 import { Footer } from "./components/Footer";
 import { SearchFilters } from "./components/SearchBar";
@@ -13,9 +16,10 @@ import { Book } from "./types";
 
 export function App() {
   const [currentView, setCurrentView] = useState<
-    "home" | "search" | "bookDetail" | "dashboard"
+    "home" | "search" | "books" | "bookDetail" | "checkout" | "orderSuccess" | "dashboard"
   >("home");
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [orderDetails, setOrderDetails] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -47,8 +51,8 @@ export function App() {
   const handleSearch = (query: string, filters: SearchFilters) => {
     setSearchQuery(query);
     setSearchFilters(filters);
-    // Always navigate to search view when search is triggered
-    setCurrentView("search");
+    // Navigate to books page for browsing
+    setCurrentView("books");
   };
 
   const handleBookClick = (book: Book) => {
@@ -56,16 +60,36 @@ export function App() {
     setCurrentView("bookDetail");
   };
 
+  const handleBuyNow = (book: Book) => {
+    if (!currentUser) {
+      // Redirect to login - in real app this would open auth modal
+      alert('Please log in to purchase books');
+      return;
+    }
+    setSelectedBook(book);
+    setCurrentView("checkout");
+  };
+
+  const handleOrderComplete = (details: any) => {
+    setOrderDetails(details);
+    setCurrentView("orderSuccess");
+  };
+
   const handleBackToHome = () => {
     setCurrentView("home");
     setSelectedBook(null);
+    setOrderDetails(null);
     setSearchQuery("");
     setSearchFilters({});
   };
 
-  const handleBackToSearch = () => {
-    setCurrentView("search");
+  const handleBackToBooks = () => {
+    setCurrentView("books");
     setSelectedBook(null);
+  };
+
+  const handleBackToBookDetail = () => {
+    setCurrentView("bookDetail");
   };
 
   const handleBackToDashboard = () => {
@@ -98,6 +122,28 @@ export function App() {
       </div>
     );
   }
+
+  // Render books page
+  if (currentView === "books") {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex flex-col">
+        <Header
+          currentUser={currentUser}
+          onSearch={handleSearch}
+          onBookSelect={handleBookClick}
+          onUserChange={handleUserChange}
+        />
+        <main className="flex-1">
+          <BooksPage
+            onBookClick={handleBookClick}
+            currentUser={currentUser}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   // Render book detail page
   if (currentView === "bookDetail" && selectedBook) {
     return (
@@ -114,13 +160,62 @@ export function App() {
             onBack={
               currentUser
                 ? handleBackToDashboard
-                : searchQuery || Object.keys(searchFilters).length > 0
-                ? handleBackToSearch
+                : currentView === "books"
+                ? handleBackToBooks
                 : handleBackToHome
             }
+            onBuyNow={handleBuyNow}
+            onAddToCart={(book) => console.log('Added to cart:', book)}
+            onAddToWishlist={(book) => console.log('Added to wishlist:', book)}
             onExchangeClick={(book) =>
               console.log("Swap clicked for book:", book)
             }
+            currentUser={currentUser}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Render checkout page
+  if (currentView === "checkout" && selectedBook && currentUser) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex flex-col">
+        <Header
+          currentUser={currentUser}
+          onSearch={handleSearch}
+          onBookSelect={handleBookClick}
+          onUserChange={handleUserChange}
+        />
+        <main className="flex-1">
+          <CheckoutPage
+            book={selectedBook}
+            currentUser={currentUser}
+            onBack={handleBackToBookDetail}
+            onOrderComplete={handleOrderComplete}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Render order success page
+  if (currentView === "orderSuccess" && orderDetails) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex flex-col">
+        <Header
+          currentUser={currentUser}
+          onSearch={handleSearch}
+          onBookSelect={handleBookClick}
+          onUserChange={handleUserChange}
+        />
+        <main className="flex-1">
+          <OrderSuccessPage
+            orderDetails={orderDetails}
+            onBackToHome={handleBackToHome}
+            onViewBooks={() => setCurrentView("books")}
           />
         </main>
         <Footer />
@@ -143,7 +238,7 @@ export function App() {
             initialQuery={searchQuery}
             initialFilters={searchFilters}
             onBookClick={handleBookClick}
-            onBack={currentUser ? handleBackToDashboard : handleBackToHome}
+            onBack={currentUser ? handleBackToDashboard : handleBackToBooks}
           />
         </main>
         <Footer />
