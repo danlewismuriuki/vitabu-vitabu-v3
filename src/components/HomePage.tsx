@@ -197,7 +197,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               <SearchBar
                 onSearch={handleSearch}
                 onResultSelect={handleBookClick}
-                placeholder="Search by grade, subject, or title..."
+                placeholder="Search books by grade, subject, or title..."
                 showFilters={true}
                 className="w-full"
               />
@@ -214,7 +214,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               </button>
               <button
                 className="btn-secondary text-lg px-10 py-5 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                onClick={handleBrowseBooksClick}
+                onClick={() => onSearch?.("", {})}
               >
                 Browse Books
               </button>
