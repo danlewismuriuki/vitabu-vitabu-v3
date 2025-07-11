@@ -51,7 +51,7 @@ const SignUpContainer: React.FC<SignUpContainerProps> = ({
     e.preventDefault();
     setIsLoading(true);
 
-    // Validate form
+    // Validate input
     const newErrors: Record<string, string> = {};
     if (!formData.username || formData.username.length < 3) {
       newErrors.username = "Username must be at least 3 characters";
@@ -74,26 +74,33 @@ const SignUpContainer: React.FC<SignUpContainerProps> = ({
       return;
     }
 
-    // Determine signup method
     const method = isValidEmail(formData.emailOrPhone) ? "email" : "phone";
     setSignupMethod(method);
 
     try {
-      await onSignup(
+      const user = await onSignup(
         formData.username,
         formData.emailOrPhone,
         formData.password
       );
+
+      // ✅ Only go to next step if successful
       setStep("verification");
     } catch (err: any) {
+      console.error("Signup failed in container:", err);
+
       if (err.code === "auth/email-already-in-use") {
         setErrors({
           emailOrPhone: "This email is already in use. Try logging in.",
         });
+      } else if (err.code === "auth/invalid-email") {
+        setErrors({
+          emailOrPhone: "Invalid email address.",
+        });
       } else {
         setErrors({ general: "Signup failed. Please try again." });
-        console.error("Signup error:", err);
       }
+      // ❌ Do NOT go to next step
     } finally {
       setIsLoading(false);
     }
@@ -124,8 +131,11 @@ const SignUpContainer: React.FC<SignUpContainerProps> = ({
       await onSocialLogin(provider);
       onComplete();
     } catch (err) {
-      if ((err as any).code === 'auth/popup-blocked') {
-        setErrors({ general: "Social signup failed because your browser blocked the popup. Please enable popups for this site in your browser settings and try again." });
+      if ((err as any).code === "auth/popup-blocked") {
+        setErrors({
+          general:
+            "Social signup failed because your browser blocked the popup. Please enable popups for this site in your browser settings and try again.",
+        });
       } else {
         setErrors({ general: "Social signup failed. Please try again." });
       }

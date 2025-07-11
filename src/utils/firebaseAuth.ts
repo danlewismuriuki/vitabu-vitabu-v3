@@ -15,10 +15,24 @@ import {
 } from "firebase/auth";
 import { auth } from "../firebase";
 
-// 🔐 Sign up a new user
+// // 🔐 Sign up a new user
+// export const signUp = async (email: string, password: string): Promise<UserCredential> => {
+//   return await createUserWithEmailAndPassword(auth, email, password);
+// };
+
+import { sendEmailVerification } from "firebase/auth";
+
 export const signUp = async (email: string, password: string): Promise<UserCredential> => {
-  return await createUserWithEmailAndPassword(auth, email, password);
+  try {
+    const userCred = await createUserWithEmailAndPassword(auth, email, password);
+    await sendEmailVerification(userCred.user);
+    return userCred;
+  } catch (err: any) {
+    console.error("❌ Signup failed:", err);
+    throw err; // Re-throw to handle in SignUpContainer
+  }
 };
+
 
 // 🔐 Sign in existing user
 export const logIn = async (

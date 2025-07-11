@@ -35,6 +35,7 @@ interface SignInFormProps {
   onSocialLogin: (provider: "google" | "facebook") => void;
   onUsernameDropdownToggle: (show: boolean) => void;
   onSwitchMode: () => void;
+  onForgotPassword: () => Promise<void>;
 }
 
 const SignInForm: React.FC<SignInFormProps> = ({
@@ -53,6 +54,7 @@ const SignInForm: React.FC<SignInFormProps> = ({
   onSocialLogin,
   onUsernameDropdownToggle,
   onSwitchMode,
+  onForgotPassword,
 }) => {
   // 🧠 Helper to detect input type based on the email/phone pattern
   const getInputType = (value: string): string => {
@@ -168,6 +170,7 @@ const SignInForm: React.FC<SignInFormProps> = ({
           </label>
           <button
             type="button"
+            onClick={onForgotPassword} // <-- this connects it to the logic
             className="text-sm text-accent-600 hover:text-accent-700 font-medium"
           >
             Forgot password?

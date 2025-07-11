@@ -1,6 +1,7 @@
 // src/containers/SignInContainer.tsx
 import React, { useState, useEffect } from "react";
 import SignInForm from "../components/SignInForm";
+import { forgotPassword } from "../utils/firebaseAuth";
 
 interface SignInContainerProps {
   onLogin: (
@@ -49,6 +50,21 @@ const SignInContainer: React.FC<SignInContainerProps> = ({
       setValidation((prev) => ({ ...prev, email: isValid }));
     } else if (field === "password") {
       setValidation((prev) => ({ ...prev, password: value.length >= 6 }));
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!formData.emailOrPhone || !formData.emailOrPhone.includes("@")) {
+      setErrors({ emailOrPhone: "Enter a valid email to reset password." });
+      return;
+    }
+
+    try {
+      await forgotPassword(formData.emailOrPhone);
+      alert("Reset email sent. Check your inbox or spam.");
+    } catch (err: any) {
+      console.error("Forgot password error:", err);
+      setErrors({ general: err.message || "Could not send reset email." });
     }
   };
 
@@ -136,6 +152,7 @@ const SignInContainer: React.FC<SignInContainerProps> = ({
       onSocialLogin={handleSocialLogin}
       onUsernameDropdownToggle={setShowUsernameDropdown}
       onSwitchMode={onSwitchMode}
+      onForgotPassword={handleForgotPassword}
     />
   );
 };
