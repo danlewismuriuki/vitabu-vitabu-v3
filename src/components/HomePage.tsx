@@ -34,14 +34,9 @@ import {
 import { Book } from "../types";
 
 import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
   FacebookAuthProvider,
-  setPersistence,
-  browserLocalPersistence,
-  browserSessionPersistence,
   updateProfile,
 } from "firebase/auth";
 import { auth } from "../firebase";
@@ -214,7 +209,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               </button>
               <button
                 className="btn-secondary text-lg px-10 py-5 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                onClick={() => onSearch?.("", {})}
+                onClick={handleBrowseBooksClick}
               >
                 Browse Books
               </button>

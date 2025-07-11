@@ -117,12 +117,14 @@ export const BookDetailPage: React.FC<BookDetailPageProps> = ({
                   {book.title}
                 </h1>
                 <div className="flex items-center space-x-2">
+                  <button
                     className={`p-2 rounded-full transition-colors ${
                       isInWishlist 
                         ? 'bg-red-100 text-red-600 hover:bg-red-200' 
                         : 'hover:bg-neutral-100 text-neutral-600'
                     }`}
                     onClick={handleAddToWishlist}
+                  >
                     <Heart className={`h-5 w-5 ${isInWishlist ? 'fill-current' : ''}`} />
                   </button>
                   <button className="p-2 rounded-full hover:bg-neutral-100">

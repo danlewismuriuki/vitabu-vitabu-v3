@@ -160,9 +160,7 @@ export function App() {
             onBack={
               currentUser
                 ? handleBackToDashboard
-                : currentView === "books"
-                ? handleBackToBooks
-                : handleBackToHome
+                : handleBackToBooks
             }
             onBuyNow={handleBuyNow}
             onAddToCart={(book) => console.log('Added to cart:', book)}

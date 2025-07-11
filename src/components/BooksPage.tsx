@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Book } from '../types';
 import { BookCard } from './BookCard';
-import { Filter, X, Grid, List, MapPin, BookOpen } from 'lucide-react';
+import { X, Grid, List, BookOpen } from 'lucide-react';
 import { mockBooks } from '../data/mockData';
 
 interface BooksPageProps {
