@@ -205,11 +205,11 @@ export const ListingDashboardPage: React.FC<ListingDashboardPageProps> = ({
                 onAuthClick={() => {}} // Not needed since user is already logged in
                 onLogout={async () => {
                   try {
-                    const { logOut } = await import('../utils/firebaseAuth');
+                    const { logOut } = await import("../utils/firebaseAuth");
                     await logOut();
                     onUserChange?.(null);
                   } catch (error) {
-                    console.error('Logout error:', error);
+                    console.error("Logout error:", error);
                   }
                 }}
               />
