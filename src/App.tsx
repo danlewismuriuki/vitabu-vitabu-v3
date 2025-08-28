@@ -4,22 +4,20 @@ import { auth } from "./firebase";
 import React, { useState, useEffect } from "react";
 import { Header } from "./components/Header";
 import { HomePage } from "./components/HomePage";
-import { SearchResultsPage } from "./components/SearchResultsPage";
-import { BookDetailPage } from "./components/BookDetailPage";
 import { BooksPage } from "./components/BooksPage";
-import { CheckoutPage } from "./components/CheckoutPage";
-import { OrderSuccessPage } from "./components/OrderSuccessPage";
-import { ListingDashboardPage } from "./components/ListingDashboardPage";
+import { BookDetailPage } from "./components/BookDetailPage";
+import { WishlistPage } from "./components/WishlistPage";
+import { MessagingInterface } from "./components/MessagingInterface";
+import { ExchangeConfirmationPage } from "./components/ExchangeConfirmationPage";
 import { Footer } from "./components/Footer";
 import { SearchFilters } from "./components/SearchBar";
 import { Book } from "./types";
 
 export function App() {
   const [currentView, setCurrentView] = useState<
-    "home" | "search" | "books" | "bookDetail" | "checkout" | "orderSuccess" | "dashboard"
+    "home" | "books" | "bookDetail" | "wishlist" | "messaging" | "exchangeSuccess"
   >("home");
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-  const [orderDetails, setOrderDetails] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -34,12 +32,11 @@ export function App() {
           email: user.email,
           profilePicture: user.photoURL || null,
           role: "buyer",
+          totalExchanges: 5, // Mock data
         };
         setCurrentUser(normalizedUser);
-        setCurrentView("dashboard");
       } else {
         setCurrentUser(null);
-        setCurrentView("home");
       }
       setIsLoading(false);
     });
@@ -47,11 +44,9 @@ export function App() {
     return () => unsubscribe();
   }, []);
 
-
   const handleSearch = (query: string, filters: SearchFilters) => {
     setSearchQuery(query);
     setSearchFilters(filters);
-    // Navigate to books page for browsing
     setCurrentView("books");
   };
 
@@ -60,25 +55,9 @@ export function App() {
     setCurrentView("bookDetail");
   };
 
-  const handleBuyNow = (book: Book) => {
-    if (!currentUser) {
-      // Redirect to login - in real app this would open auth modal
-      alert('Please log in to purchase books');
-      return;
-    }
-    setSelectedBook(book);
-    setCurrentView("checkout");
-  };
-
-  const handleOrderComplete = (details: any) => {
-    setOrderDetails(details);
-    setCurrentView("orderSuccess");
-  };
-
   const handleBackToHome = () => {
     setCurrentView("home");
     setSelectedBook(null);
-    setOrderDetails(null);
     setSearchQuery("");
     setSearchFilters({});
   };
@@ -88,27 +67,17 @@ export function App() {
     setSelectedBook(null);
   };
 
-  const handleBackToBookDetail = () => {
-    setCurrentView("bookDetail");
-  };
-
-  const handleBackToDashboard = () => {
-    setCurrentView("dashboard");
-    setSelectedBook(null);
-  };
-
-
   const handleUserChange = (user: any) => {
     setCurrentUser(user);
-    if (!user) {
-      // User logged out, go back to home
-      setCurrentView("home");
-    }
   };
 
-  const handleListBookClick = () => {
-    // This would open the ListBookModal
-    console.log("List book clicked");
+  const handleContactSeller = (book: Book) => {
+    setSelectedBook(book);
+    setCurrentView("messaging");
+  };
+
+  const handleExchangeComplete = () => {
+    setCurrentView("exchangeSuccess");
   };
 
   // Show loading spinner while checking auth state
@@ -137,6 +106,8 @@ export function App() {
           <BooksPage
             onBookClick={handleBookClick}
             currentUser={currentUser}
+            initialQuery={searchQuery}
+            initialFilters={searchFilters}
           />
         </main>
         <Footer />
@@ -157,17 +128,11 @@ export function App() {
         <main className="flex-1">
           <BookDetailPage
             book={selectedBook}
-            onBack={
-              currentUser
-                ? handleBackToDashboard
-                : handleBackToBooks
-            }
-            onBuyNow={handleBuyNow}
+            onBack={handleBackToBooks}
+            onBuyNow={handleContactSeller}
             onAddToCart={(book) => console.log('Added to cart:', book)}
             onAddToWishlist={(book) => console.log('Added to wishlist:', book)}
-            onExchangeClick={(book) =>
-              console.log("Swap clicked for book:", book)
-            }
+            onExchangeClick={(book) => console.log("Exchange clicked for book:", book)}
             currentUser={currentUser}
           />
         </main>
@@ -176,8 +141,8 @@ export function App() {
     );
   }
 
-  // Render checkout page
-  if (currentView === "checkout" && selectedBook && currentUser) {
+  // Render wishlist page
+  if (currentView === "wishlist") {
     return (
       <div className="min-h-screen bg-neutral-50 flex flex-col">
         <Header
@@ -187,56 +152,10 @@ export function App() {
           onUserChange={handleUserChange}
         />
         <main className="flex-1">
-          <CheckoutPage
-            book={selectedBook}
-            currentUser={currentUser}
-            onBack={handleBackToBookDetail}
-            onOrderComplete={handleOrderComplete}
-          />
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  // Render order success page
-  if (currentView === "orderSuccess" && orderDetails) {
-    return (
-      <div className="min-h-screen bg-neutral-50 flex flex-col">
-        <Header
-          currentUser={currentUser}
-          onSearch={handleSearch}
-          onBookSelect={handleBookClick}
-          onUserChange={handleUserChange}
-        />
-        <main className="flex-1">
-          <OrderSuccessPage
-            orderDetails={orderDetails}
-            onBackToHome={handleBackToHome}
-            onViewBooks={() => setCurrentView("books")}
-          />
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  // Render search results page
-  if (currentView === "search") {
-    return (
-      <div className="min-h-screen bg-neutral-50 flex flex-col">
-        <Header
-          currentUser={currentUser}
-          onSearch={handleSearch}
-          onBookSelect={handleBookClick}
-          onUserChange={handleUserChange}
-        />
-        <main className="flex-1">
-          <SearchResultsPage
-            initialQuery={searchQuery}
-            initialFilters={searchFilters}
+          <WishlistPage
             onBookClick={handleBookClick}
-            onBack={currentUser ? handleBackToDashboard : handleBackToBooks}
+            onSetupAlert={(book) => console.log('Setup alert for:', book)}
+            currentUser={currentUser}
           />
         </main>
         <Footer />
@@ -244,21 +163,30 @@ export function App() {
     );
   }
 
-  // Render dashboard page for logged-in users
-  if (currentView === "dashboard" && currentUser) {
+  // Render messaging interface
+  if (currentView === "messaging" && selectedBook && currentUser) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex flex-col">
-        <main className="flex-1">
-          <ListingDashboardPage
-            currentUser={currentUser}
-            onBookClick={handleBookClick}
-            onListBookClick={handleListBookClick}
-            onSearch={handleSearch}
-            onUserChange={handleUserChange}
-          />
-        </main>
-        <Footer />
-      </div>
+      <MessagingInterface
+        book={selectedBook}
+        seller={selectedBook.seller}
+        currentUser={currentUser}
+        onBack={handleBackToBooks}
+        onExchangeConfirmed={handleExchangeComplete}
+      />
+    );
+  }
+
+  // Render exchange success page
+  if (currentView === "exchangeSuccess" && selectedBook && currentUser) {
+    return (
+      <ExchangeConfirmationPage
+        exchangedBook={selectedBook}
+        exchangePartner={selectedBook.seller}
+        currentUser={currentUser}
+        onBackToHome={handleBackToHome}
+        onBrowseMore={() => setCurrentView("books")}
+        onListBooks={() => console.log('List books clicked')}
+      />
     );
   }
 

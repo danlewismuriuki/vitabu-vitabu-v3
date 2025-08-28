@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Book } from '../types';
 import { BookCard } from './BookCard';
-import { X, Grid, List, BookOpen } from 'lucide-react';
+import { X, Grid, List, BookOpen, MapPin, Filter, AlertTriangle } from 'lucide-react';
 import { mockBooks } from '../data/mockData';
+import { AlertSetupModal } from './AlertSetupModal';
 
 interface BooksPageProps {
   onBookClick?: (book: Book) => void;
   currentUser?: any;
+  initialQuery?: string;
+  initialFilters?: any;
 }
 
 interface ActiveFilters {
@@ -15,14 +18,23 @@ interface ActiveFilters {
   condition?: string;
   location?: string;
   exchangeOK?: boolean;
+  priceRange?: { min: number; max: number };
 }
 
-export const BooksPage: React.FC<BooksPageProps> = ({ onBookClick, currentUser }) => {
+export const BooksPage: React.FC<BooksPageProps> = ({ 
+  onBookClick, 
+  currentUser,
+  initialQuery = "",
+  initialFilters = {}
+}) => {
   const [books, setBooks] = useState<Book[]>(mockBooks);
   const [filteredBooks, setFilteredBooks] = useState<Book[]>(mockBooks);
-  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>(initialFilters);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState("Nairobi");
 
   const subjects = ['Mathematics', 'English', 'Kiswahili', 'Science', 'Social Studies', 'Religious Education', 'Creative Arts'];
   const conditions = [
@@ -31,17 +43,21 @@ export const BooksPage: React.FC<BooksPageProps> = ({ onBookClick, currentUser }
     { value: 'fair', label: 'Fair' },
     { value: 'writing-inside', label: 'Has Writing' }
   ];
+  const locations = ["Nairobi", "Mombasa", "Nakuru", "Kisumu", "Eldoret", "Thika", "Embu", "Meru"];
 
   useEffect(() => {
     applyFilters();
-  }, [activeFilters, books]);
+  }, [activeFilters, books, searchQuery]);
 
   const applyFilters = () => {
     setIsLoading(true);
     
-    // Simulate loading delay for better UX
     setTimeout(() => {
       let filtered = books.filter(book => {
+        const matchesQuery = !searchQuery || 
+          book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          book.subject.toLowerCase().includes(searchQuery.toLowerCase());
+        
         const matchesGrade = !activeFilters.grade || book.grade === activeFilters.grade;
         const matchesSubject = !activeFilters.subject || book.subject === activeFilters.subject;
         const matchesCondition = !activeFilters.condition || book.condition === activeFilters.condition;
@@ -49,12 +65,20 @@ export const BooksPage: React.FC<BooksPageProps> = ({ onBookClick, currentUser }
           book.location.toLowerCase().includes(activeFilters.location.toLowerCase());
         const matchesExchange = activeFilters.exchangeOK === undefined || 
           book.availableForExchange === activeFilters.exchangeOK;
+        const matchesPrice = !activeFilters.priceRange || 
+          (book.price >= activeFilters.priceRange.min && book.price <= activeFilters.priceRange.max);
 
-        return matchesGrade && matchesSubject && matchesCondition && matchesLocation && matchesExchange;
+        return matchesQuery && matchesGrade && matchesSubject && matchesCondition && 
+               matchesLocation && matchesExchange && matchesPrice;
       });
 
       setFilteredBooks(filtered);
       setIsLoading(false);
+
+      // Show alert modal if no results found
+      if (filtered.length === 0 && (searchQuery || Object.keys(activeFilters).length > 0)) {
+        setShowAlertModal(true);
+      }
     }, 200);
   };
 
@@ -75,6 +99,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ onBookClick, currentUser }
 
   const clearAllFilters = () => {
     setActiveFilters({});
+    setSearchQuery("");
   };
 
   const getActiveFilterCount = () => {
@@ -89,27 +114,69 @@ export const BooksPage: React.FC<BooksPageProps> = ({ onBookClick, currentUser }
         return conditions.find(c => c.value === value)?.label || value;
       case 'exchangeOK':
         return 'Exchange Available';
+      case 'priceRange':
+        return `KES ${value.min}-${value.max}`;
       default:
         return value;
     }
   };
 
+  const handleAlertSetup = (alertData: any) => {
+    console.log('Alert setup:', alertData);
+    setShowAlertModal(false);
+    // In real app, this would save the alert
+  };
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#EBF2F7' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
+        {/* Page Header with Location */}
         <div className="mb-8">
-          <h1 className="text-3xl font-poppins font-bold text-primary-800 mb-2">
-            Browse Books
-          </h1>
-          <p className="text-lg text-neutral-600">
-            Find the perfect books for your child's education
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-poppins font-bold text-primary-800 mb-2">
+                CBC School Books
+              </h1>
+              <p className="text-lg text-neutral-600">
+                Find books from verified parents in your area
+              </p>
+            </div>
+            
+            {/* Location Selector */}
+            <div className="flex items-center space-x-2">
+              <MapPin className="h-5 w-5 text-accent-600" />
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="text-lg font-medium text-primary-700 bg-white border border-neutral-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-accent-500"
+              >
+                {locations.map(location => (
+                  <option key={location} value={location}>{location}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="flex items-center space-x-6 text-sm text-neutral-600">
+            <div className="flex items-center space-x-1">
+              <BookOpen className="h-4 w-4 text-accent-600" />
+              <span>{books.length} books available</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Users className="h-4 w-4 text-secondary-600" />
+              <span>127 active parents in {selectedLocation}</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <AlertTriangle className="h-4 w-4 text-gold-600" />
+              <span>15 new listings this week</span>
+            </div>
+          </div>
         </div>
 
         {/* Filters Bar */}
         <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             {/* Grade Filter */}
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-2">Grade</label>
@@ -119,7 +186,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ onBookClick, currentUser }
                 className="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
               >
                 <option value="">All Grades</option>
-                {[1, 2, 3, 4, 5, 6, 7, 8].map(grade => (
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(grade => (
                   <option key={grade} value={grade}>Grade {grade}</option>
                 ))}
               </select>
@@ -155,21 +222,40 @@ export const BooksPage: React.FC<BooksPageProps> = ({ onBookClick, currentUser }
               </select>
             </div>
 
-            {/* Location Filter */}
+            {/* Price Range */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">Location</label>
-              <input
-                type="text"
-                value={activeFilters.location || ''}
-                onChange={(e) => handleFilterChange('location', e.target.value)}
-                placeholder="Enter area..."
+              <label className="block text-sm font-medium text-neutral-700 mb-2">Max Price</label>
+              <select
+                value={activeFilters.priceRange?.max || ''}
+                onChange={(e) => {
+                  const max = e.target.value ? parseInt(e.target.value) : undefined;
+                  handleFilterChange('priceRange', max ? { min: 0, max } : undefined);
+                }}
                 className="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-              />
+              >
+                <option value="">Any Price</option>
+                <option value="500">Under KES 500</option>
+                <option value="1000">Under KES 1,000</option>
+                <option value="1500">Under KES 1,500</option>
+                <option value="2000">Under KES 2,000</option>
+              </select>
+            </div>
+
+            {/* Distance Filter */}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">Distance</label>
+              <select className="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-accent-500 focus:border-accent-500">
+                <option value="">Any Distance</option>
+                <option value="5">Within 5km</option>
+                <option value="10">Within 10km</option>
+                <option value="25">Within 25km</option>
+                <option value="50">Within 50km</option>
+              </select>
             </div>
 
             {/* Exchange Filter */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">Exchange</label>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">Type</label>
               <select
                 value={activeFilters.exchangeOK === undefined ? '' : activeFilters.exchangeOK.toString()}
                 onChange={(e) => handleFilterChange('exchangeOK', e.target.value === '' ? undefined : e.target.value === 'true')}
@@ -223,6 +309,11 @@ export const BooksPage: React.FC<BooksPageProps> = ({ onBookClick, currentUser }
             <h2 className="text-xl font-poppins font-semibold text-primary-800">
               {isLoading ? 'Searching...' : `${filteredBooks.length} book${filteredBooks.length !== 1 ? 's' : ''} found`}
             </h2>
+            {searchQuery && (
+              <p className="text-sm text-neutral-600 mt-1">
+                Results for "{searchQuery}" in {selectedLocation}
+              </p>
+            )}
             {getActiveFilterCount() > 0 && (
               <p className="text-sm text-neutral-600 mt-1">
                 Filtered by {getActiveFilterCount()} criteria
@@ -282,17 +373,39 @@ export const BooksPage: React.FC<BooksPageProps> = ({ onBookClick, currentUser }
                     <BookOpen className="h-12 w-12 text-neutral-400" />
                   </div>
                   <h3 className="text-xl font-poppins font-semibold text-primary-700 mb-2">
-                    No books found
+                    No books found in {selectedLocation}
                   </h3>
                   <p className="text-neutral-600 mb-6">
-                    Try adjusting your filters to see more results.
+                    {searchQuery 
+                      ? `We couldn't find "${searchQuery}" with your current filters.`
+                      : 'No books match your current filters.'
+                    }
                   </p>
-                  <button
-                    onClick={clearAllFilters}
-                    className="btn-primary"
-                  >
-                    Clear All Filters
-                  </button>
+                  
+                  {/* Nearby Results */}
+                  <div className="bg-blue-50 p-4 rounded-lg mb-6">
+                    <p className="text-blue-700 font-medium mb-2">
+                      📍 But we found 5 similar books in Thika (25km away)
+                    </p>
+                    <button className="text-blue-600 hover:text-blue-700 text-sm underline">
+                      Show books in nearby areas
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setShowAlertModal(true)}
+                      className="btn-primary w-full"
+                    >
+                      🔔 Get Notified When Available
+                    </button>
+                    <button
+                      onClick={clearAllFilters}
+                      className="btn-secondary w-full"
+                    >
+                      Clear Filters & Browse All
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -308,6 +421,16 @@ export const BooksPage: React.FC<BooksPageProps> = ({ onBookClick, currentUser }
           </div>
         )}
       </div>
+
+      {/* Alert Setup Modal */}
+      <AlertSetupModal
+        isOpen={showAlertModal}
+        onClose={() => setShowAlertModal(false)}
+        onSetupAlert={handleAlertSetup}
+        searchQuery={searchQuery}
+        filters={activeFilters}
+        location={selectedLocation}
+      />
     </div>
   );
 };

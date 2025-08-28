@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { logIn, signUp } from "../utils/firebaseAuth";
 import {
   DollarSign,
   BookOpen,
@@ -11,35 +10,14 @@ import {
   CheckCircle,
   Facebook,
   Shield,
+  MapPin,
+  Filter,
+  Search,
 } from "lucide-react";
-import { StatsCard } from "./StatsCard";
 import { BookCard } from "./BookCard";
-import { ActivityFeed } from "./ActivityFeed";
-import { ProgressTracker } from "./ProgressTracker";
-import { ExchangeBanner } from "./ExchangeBanner";
-import { ExchangeMatchCard } from "./ExchangeMatchCard";
-import { RoleBasedDashboard } from "./RoleBasedDashboard";
-import { DonationComingSoon } from "./DonationComingSoon";
-import { HowItWorks } from "./HowItWorks";
-import { SignInPrompt } from "./SignInPrompt";
-import { ListBookModal } from "./ListBookModal";
-import AuthFlow from "./AuthFlow";
 import { SearchBar, SearchFilters } from "./SearchBar";
-import {
-  mockBooks,
-  mockActivityFeed,
-  mockUserStats,
-  mockExchangeMatches,
-} from "../data/mockData";
 import { Book } from "../types";
-
-import {
-  signInWithPopup,
-  GoogleAuthProvider,
-  FacebookAuthProvider,
-  updateProfile,
-} from "firebase/auth";
-import { auth } from "../firebase";
+import { mockBooks } from "../data/mockData";
 
 interface HomePageProps {
   onSearch?: (query: string, filters: SearchFilters) => void;
@@ -52,16 +30,40 @@ export const HomePage: React.FC<HomePageProps> = ({
   onBookClick,
   currentUser,
 }) => {
-  const [showListBookModal, setShowListBookModal] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [selectedGrade, setSelectedGrade] = useState<string>("");
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [selectedLocation, setSelectedLocation] = useState<string>("Nairobi");
+  const [filteredBooks, setFilteredBooks] = useState<Book[]>(mockBooks.slice(0, 8));
 
-  const featuredBooks = mockBooks
-    .filter((book) => book.isFeatured || book.isUrgent)
-    .slice(0, 4);
-  const pendingExchanges = mockExchangeMatches.filter(
-    (match) => match.status === "pending"
-  );
+  const grades = ["PP1", "PP2", "Gr1", "Gr2", "Gr3", "Gr4", "Gr5", "Gr6", "Gr7", "Gr8", "Gr9"];
+  const subjects = ["Mathematics", "English", "Kiswahili", "Science", "Social Studies"];
+  const locations = ["Nairobi", "Mombasa", "Nakuru", "Kisumu", "Eldoret", "Thika"];
+
+  const handleQuickFilter = (type: 'grade' | 'subject', value: string) => {
+    if (type === 'grade') {
+      setSelectedGrade(selectedGrade === value ? "" : value);
+    } else {
+      setSelectedSubject(selectedSubject === value ? "" : value);
+    }
+    
+    // Apply filters immediately
+    let filtered = mockBooks;
+    const gradeToFilter = type === 'grade' ? (selectedGrade === value ? "" : value) : selectedGrade;
+    const subjectToFilter = type === 'subject' ? (selectedSubject === value ? "" : value) : selectedSubject;
+    
+    if (gradeToFilter) {
+      const gradeNum = gradeToFilter.replace(/[^0-9]/g, '');
+      if (gradeNum) {
+        filtered = filtered.filter(book => book.grade.toString() === gradeNum);
+      }
+    }
+    
+    if (subjectToFilter) {
+      filtered = filtered.filter(book => book.subject === subjectToFilter);
+    }
+    
+    setFilteredBooks(filtered.slice(0, 8));
+  };
 
   const handleSearch = (query: string, filters: SearchFilters) => {
     onSearch?.(query, filters);
@@ -71,468 +73,405 @@ export const HomePage: React.FC<HomePageProps> = ({
     onBookClick?.(book);
   };
 
-  const handleExchangeClick = (book: Book) => {
-    console.log("Exchange clicked for book:", book.title);
-  };
-
-  const handleAcceptExchange = (matchId: string) => {
-    console.log("Accept exchange:", matchId);
-  };
-
-  const handleDeclineExchange = (matchId: string) => {
-    console.log("Decline exchange:", matchId);
-  };
-
-  const handleSignInClick = () => {
-    setAuthMode("login");
-    setShowAuthModal(true);
-  };
-
-  const handleAuthSuccess = (user: any) => {
-    console.log("User authenticated:", user);
-    setShowAuthModal(false);
-    // The parent component will handle updating the current user
-  };
-
-  const handleListBookClick = () => {
-    setShowListBookModal(true);
-  };
-
-  const handleBrowseBooksClick = () => {
-    // Trigger search with empty query to show all books
+  const handleBrowseAll = () => {
     onSearch?.("", {});
   };
 
-  // const handleLogin = async (
-  //   email: string,
-  //   password: string,
-  //   rememberMe: boolean
-  // ) => {
-  //   await setPersistence(
-  //     auth,
-  //     rememberMe ? browserLocalPersistence : browserSessionPersistence
-  //   );
-
-  //   const userCred = await signInWithEmailAndPassword(auth, email, password);
-  //   console.log("User logged in:", userCred.user);
-  //   setShowAuthModal(false); // Close modal after login
-  // };
-
-  const handleLogin = async (
-    email: string,
-    password: string,
-    rememberMe: boolean
-  ): Promise<void> => {
-    const userCred = await logIn(email, password, rememberMe);
-    console.log("User logged in:", userCred.user);
-    setShowAuthModal(false);
-  };
-
-  // const handleSignup = async (
-  //   username: string,
-  //   email: string,
-  //   password: string
-  // ) => {
-  //   const userCred = await createUserWithEmailAndPassword(
-  //     auth,
-  //     email,
-  //     password
-  //   );
-  //   await updateProfile(userCred.user, { displayName: username });
-  //   console.log("User signed up:", userCred.user);
-  //   setShowAuthModal(false); // Close modal after signup
-  // };
-
-  const handleSignup = async (
-    username: string,
-    email: string,
-    password: string
-  ): Promise<void> => {
-    const userCred = await signUp(email, password);
-    await updateProfile(userCred.user, { displayName: username });
-    setShowAuthModal(false);
-  };
-
-  const handleSocialLogin = async (provider: "google" | "facebook") => {
-    const selectedProvider =
-      provider === "google"
-        ? new GoogleAuthProvider()
-        : new FacebookAuthProvider();
-
-    await signInWithPopup(auth, selectedProvider);
-    console.log("User signed in with social provider");
-    setShowAuthModal(false);
-  };
-
-  const handleBookListed = (newBook: any) => {
-    console.log("New book listed:", newBook);
-    // In a real app, this would update the books list
-    // For now, we'll just show a success message
-    alert(
-      "🎉 Your book has been listed successfully! Other parents can now find and contact you."
-    );
-  };
-
   return (
-    <>
-      <div className="min-h-screen bg-kitenge-pattern">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Hero Section */}
-          <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-6xl font-poppins font-bold text-primary-800 mb-6 leading-tight">
-              Real Parents. Real Savings. Real Books.
-            </h1>
-            <p className="text-xl md:text-2xl text-neutral-600 mb-8 max-w-4xl mx-auto leading-relaxed">
-              Exchange, buy, or donate school books with parents in your area.
-              Save money while building stronger communities across Kenya.
-            </p>
+    <div className="min-h-screen bg-kitenge-pattern">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Hero Section - Above the Fold */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-5xl font-poppins font-bold text-primary-800 mb-4 leading-tight">
+            Find CBC School Books
+          </h1>
+          <p className="text-lg md:text-xl text-neutral-600 mb-6 max-w-3xl mx-auto">
+            Browse thousands of books from Kenyan parents. No registration needed to explore.
+          </p>
 
-            {/* Hero Search Bar */}
-            <div className="max-w-3xl mx-auto mb-8">
-              <SearchBar
-                onSearch={handleSearch}
-                onResultSelect={handleBookClick}
-                placeholder="Search books by grade, subject, or title..."
-                showFilters={true}
-                className="w-full"
-              />
-            </div>
-
-            {/* Primary CTAs */}
-            <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-8">
-              <button
-                onClick={handleListBookClick}
-                className="btn-primary flex items-center space-x-2 text-lg px-10 py-5 shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
-              >
-                <Plus className="h-6 w-6" />
-                <span>List Your First Book</span>
-              </button>
-              <button
-                className="btn-secondary text-lg px-10 py-5 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                onClick={handleBrowseBooksClick}
-              >
-                Browse Books
-              </button>
-            </div>
-
-            {/* Trust Indicators */}
-            <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-8 text-sm text-neutral-600">
-              <div className="flex items-center space-x-2">
-                <Users className="h-4 w-4 text-secondary-600" />
-                <span>8,000+ happy parents</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <DollarSign className="h-4 w-4 text-gold-600" />
-                <span>KES 2.3M+ saved</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-accent-600" />
-                <span>100% secure transactions</span>
-              </div>
-            </div>
+          {/* Location Selector */}
+          <div className="flex items-center justify-center space-x-2 mb-6">
+            <MapPin className="h-5 w-5 text-accent-600" />
+            <select
+              value={selectedLocation}
+              onChange={(e) => setSelectedLocation(e.target.value)}
+              className="text-lg font-medium text-primary-700 bg-white border border-neutral-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-accent-500"
+            >
+              {locations.map(location => (
+                <option key={location} value={location}>{location}</option>
+              ))}
+            </select>
           </div>
 
-          {/* How It Works Section */}
-          <HowItWorks
-            onListBookClick={handleListBookClick}
-            onBrowseBooksClick={handleBrowseBooksClick}
-          />
+          {/* Search Bar */}
+          <div className="max-w-2xl mx-auto mb-6">
+            <SearchBar
+              onSearch={handleSearch}
+              onResultSelect={handleBookClick}
+              placeholder="Search by grade, subject, or title..."
+              showFilters={false}
+              className="w-full"
+            />
+          </div>
 
-          {/* Featured Books Section - Limited to 4 Cards */}
-          <section className="mb-16">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-poppins font-bold text-primary-800 mb-4">
-                Featured Books
+          {/* Quick Stats */}
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-8 text-sm text-neutral-600 mb-8">
+            <div className="flex items-center space-x-2">
+              <BookOpen className="h-4 w-4 text-accent-600" />
+              <span className="font-medium">8,247 books available</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Users className="h-4 w-4 text-secondary-600" />
+              <span className="font-medium">2,156 active parents</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <DollarSign className="h-4 w-4 text-gold-600" />
+              <span className="font-medium">KES 2.3M+ saved</span>
+            </div>
+          </div>
+        </div>
+
+        {/* CBC Grade Filter Pills */}
+        <div className="mb-6">
+          <h3 className="text-lg font-poppins font-semibold text-primary-700 mb-3 text-center">
+            Browse by Grade Level
+          </h3>
+          <div className="flex flex-wrap justify-center gap-2">
+            {grades.map((grade) => (
+              <button
+                key={grade}
+                onClick={() => handleQuickFilter('grade', grade)}
+                className={`px-4 py-2 rounded-full font-medium transition-all duration-200 ${
+                  selectedGrade === grade
+                    ? 'bg-accent-500 text-white shadow-lg'
+                    : 'bg-white text-primary-700 border border-neutral-300 hover:border-accent-400 hover:bg-accent-50'
+                }`}
+              >
+                {grade}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Subject Filter Pills */}
+        <div className="mb-8">
+          <h3 className="text-lg font-poppins font-semibold text-primary-700 mb-3 text-center">
+            Browse by Subject
+          </h3>
+          <div className="flex flex-wrap justify-center gap-2">
+            {subjects.map((subject) => (
+              <button
+                key={subject}
+                onClick={() => handleQuickFilter('subject', subject)}
+                className={`px-4 py-2 rounded-full font-medium transition-all duration-200 ${
+                  selectedSubject === subject
+                    ? 'bg-secondary-500 text-white shadow-lg'
+                    : 'bg-white text-primary-700 border border-neutral-300 hover:border-secondary-400 hover:bg-secondary-50'
+                }`}
+              >
+                {subject}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Featured Books Grid */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-poppins font-bold text-primary-800">
+                {selectedGrade || selectedSubject ? 'Filtered Books' : 'Available Books'}
               </h2>
-              <p className="text-lg text-neutral-600">
-                Hand-picked deals from trusted parents in your community
+              <p className="text-neutral-600">
+                {selectedGrade && selectedSubject 
+                  ? `${selectedSubject} books for ${selectedGrade} in ${selectedLocation}`
+                  : selectedGrade 
+                    ? `${selectedGrade} books in ${selectedLocation}`
+                    : selectedSubject
+                      ? `${selectedSubject} books in ${selectedLocation}`
+                      : `Fresh listings from parents in ${selectedLocation}`
+                }
               </p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {featuredBooks.map((book) => (
-                <BookCard
-                  key={book.id}
-                  book={book}
-                  onBookClick={handleBookClick}
-                  onExchangeClick={handleExchangeClick}
-                />
-              ))}
-            </div>
-
-            <div className="text-center">
+            
+            {(selectedGrade || selectedSubject) && (
               <button
-                onClick={handleBrowseBooksClick}
-                className="btn-secondary text-lg px-8 py-3"
+                onClick={() => {
+                  setSelectedGrade("");
+                  setSelectedSubject("");
+                  setFilteredBooks(mockBooks.slice(0, 8));
+                }}
+                className="text-accent-600 hover:text-accent-700 font-medium text-sm"
               >
-                View More Books →
+                Clear filters
               </button>
-            </div>
-          </section>
-
-          {/* Impact Metrics Section */}
-          <section className="mb-16">
-            <div className="card bg-gradient-to-br from-secondary-500 to-accent-500 text-white">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-poppins font-bold mb-4">
-                  Community Impact
-                </h2>
-                <p className="text-xl opacity-90">
-                  Together, we're transforming how Kenyan families access
-                  education
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-                <div className="text-center">
-                  <div className="text-5xl font-bold mb-2">KES 2.3M+</div>
-                  <div className="text-xl opacity-90">Total Saved</div>
-                  <div className="text-sm opacity-75 mt-1">
-                    by families like yours
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-5xl font-bold mb-2">15,000+</div>
-                  <div className="text-xl opacity-90">Books Reused</div>
-                  <div className="text-sm opacity-75 mt-1">
-                    keeping education affordable
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-5xl font-bold mb-2">8,000+</div>
-                  <div className="text-xl opacity-90">Happy Parents</div>
-                  <div className="text-sm opacity-75 mt-1">
-                    building stronger communities
-                  </div>
-                </div>
-              </div>
-
-              {/* Testimonials */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white/10 p-6 rounded-xl">
-                  <p className="italic mb-4">
-                    "I've saved over KES 15,000 this year alone! My children get
-                    the books they need, and I've made friends with other
-                    parents in our area."
-                  </p>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                      <span className="font-bold">MW</span>
-                    </div>
-                    <div>
-                      <div className="font-semibold">Mary Wanjiku</div>
-                      <div className="text-sm opacity-75">
-                        Nairobi • Mother of 3
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white/10 p-6 rounded-xl">
-                  <p className="italic mb-4">
-                    "The exchange system is brilliant! My son gets new books for
-                    each grade, and I help other families too. It's a win-win."
-                  </p>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                      <span className="font-bold">SA</span>
-                    </div>
-                    <div>
-                      <div className="font-semibold">Susan Achieng</div>
-                      <div className="text-sm opacity-75">
-                        Nakuru • Mother of 2
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Layout with Sidebar for Logged-in Users */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-8">
-              {/* Sign In Prompt for Non-Users */}
-              {!currentUser && (
-                <SignInPrompt onSignInClick={handleSignInClick} />
-              )}
-            </div>
-
-            {/* Sidebar - Only for signed-in users */}
-            {currentUser && (
-              <div className="space-y-6">
-                {/* Role-Based Dashboard */}
-                <RoleBasedDashboard
-                  user={currentUser}
-                  onBrowseBooks={handleBrowseBooksClick}
-                  onListBook={handleListBookClick}
-                  onFindExchanges={() => console.log("Find exchanges clicked")}
-                />
-
-                {/* Pending Exchanges - Only for signed-in users */}
-                {pendingExchanges.length > 0 && (
-                  <div className="card">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-poppins font-semibold text-primary-700 flex items-center space-x-2">
-                        <ArrowRightLeft className="h-5 w-5 text-accent-600" />
-                        <span>Pending Exchanges</span>
-                      </h3>
-                      <button className="text-accent-600 hover:text-accent-700 text-sm font-medium">
-                        View all →
-                      </button>
-                    </div>
-                    <div className="space-y-4">
-                      {pendingExchanges.slice(0, 2).map((exchangeMatch) => (
-                        <div
-                          key={exchangeMatch.id}
-                          className="p-3 bg-accent-50 rounded-lg border border-accent-200"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-accent-700">
-                              Exchange with {exchangeMatch.userB.name}
-                            </span>
-                            <span className="text-xs text-accent-600 bg-accent-100 px-2 py-1 rounded">
-                              Pending
-                            </span>
-                          </div>
-                          <p className="text-xs text-neutral-600 mb-2">
-                            {exchangeMatch.userABook.title} ↔{" "}
-                            {exchangeMatch.userBBook.title}
-                          </p>
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() =>
-                                handleAcceptExchange(exchangeMatch.id)
-                              }
-                              className="text-xs bg-secondary-500 text-white px-3 py-1 rounded hover:bg-secondary-600"
-                            >
-                              Accept
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleDeclineExchange(exchangeMatch.id)
-                              }
-                              className="text-xs bg-neutral-300 text-neutral-700 px-3 py-1 rounded hover:bg-neutral-400"
-                            >
-                              Decline
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Activity Feed */}
-                <ActivityFeed activities={mockActivityFeed} />
-
-                {/* Progress Trackers */}
-                <ProgressTracker
-                  title="Exchange Master Progress"
-                  current={8}
-                  target={15}
-                  unit="exchanges"
-                  color="secondary"
-                  reward="Free delivery on all exchanges"
-                />
-              </div>
             )}
           </div>
 
-          {/* Trust Section */}
-          <section className="mt-16 mb-16">
-            <div className="card bg-gradient-to-r from-neutral-50 to-white border-2 border-neutral-200">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-poppins font-bold text-primary-800 mb-4">
-                  🇰🇪 Built in Kenya, for Kenyan Families
-                </h2>
-                <p className="text-lg text-neutral-600">
-                  Trusted by thousands of parents across the country
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {filteredBooks.map((book) => (
+              <BookCard
+                key={book.id}
+                book={book}
+                onBookClick={handleBookClick}
+                onExchangeClick={(book) => console.log('Exchange clicked:', book)}
+              />
+            ))}
+          </div>
+
+          <div className="text-center">
+            <button
+              onClick={handleBrowseAll}
+              className="btn-primary text-lg px-8 py-4 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+            >
+              Browse All 2,847 Books →
+            </button>
+          </div>
+        </section>
+
+        {/* How It Works - Simplified */}
+        <section className="mb-12">
+          <div className="card bg-gradient-to-br from-neutral-50 to-white border-2 border-neutral-200">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-poppins font-bold text-primary-800 mb-4">
+                How Vitabu Vitabu Works
+              </h2>
+              <p className="text-lg text-neutral-600">
+                Simple book exchanges between Kenyan parents
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="h-8 w-8 text-accent-600" />
+                </div>
+                <h3 className="font-poppins font-semibold text-primary-800 mb-2">
+                  1. Browse Books
+                </h3>
+                <p className="text-neutral-600">
+                  Find books by grade, subject, or location. No account needed to explore.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Facebook Community */}
-                <div className="text-center p-6 bg-blue-50 rounded-xl border border-blue-200">
-                  <div className="flex items-center justify-center mb-4">
-                    <div className="p-3 bg-blue-500 rounded-full">
-                      <Facebook className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                  <h3 className="font-poppins font-semibold text-primary-800 mb-2">
-                    Join 5,000+ Parents on Facebook
-                  </h3>
-                  <p className="text-sm text-neutral-600 mb-4">
-                    Connect with other parents, share tips, and get the latest
-                    book deals
-                  </p>
-                  <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                    Join Community
-                  </button>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-secondary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ArrowRightLeft className="h-8 w-8 text-secondary-600" />
                 </div>
+                <h3 className="font-poppins font-semibold text-primary-800 mb-2">
+                  2. Contact Parents
+                </h3>
+                <p className="text-neutral-600">
+                  Message book owners directly. Quick registration when you're ready.
+                </p>
+              </div>
 
-                {/* M-Pesa Security */}
-                <div className="text-center p-6 bg-secondary-50 rounded-xl border border-secondary-200">
-                  <div className="flex items-center justify-center mb-4">
-                    <div className="p-3 bg-secondary-500 rounded-full">
-                      <Shield className="h-6 w-6 text-white" />
-                    </div>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gold-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="h-8 w-8 text-gold-600" />
+                </div>
+                <h3 className="font-poppins font-semibold text-primary-800 mb-2">
+                  3. Meet & Exchange
+                </h3>
+                <p className="text-neutral-600">
+                  Safe meetups in public places. Save money, help families.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Trust & Community Section */}
+        <section className="mb-12">
+          <div className="card bg-gradient-to-r from-secondary-50 to-accent-50 border-2 border-secondary-200">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-poppins font-bold text-primary-800 mb-4">
+                🇰🇪 Trusted by Kenyan Families
+              </h2>
+              <p className="text-lg text-neutral-600">
+                Real parents helping real parents across Kenya
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+              {/* Community Stats */}
+              <div className="text-center p-6 bg-white rounded-xl shadow-sm">
+                <div className="text-3xl font-bold text-secondary-600 mb-2">8,000+</div>
+                <div className="text-neutral-600">Happy Parents</div>
+                <div className="text-sm text-neutral-500 mt-1">across all 47 counties</div>
+              </div>
+
+              <div className="text-center p-6 bg-white rounded-xl shadow-sm">
+                <div className="text-3xl font-bold text-gold-600 mb-2">KES 2.3M+</div>
+                <div className="text-neutral-600">Total Saved</div>
+                <div className="text-sm text-neutral-500 mt-1">by families like yours</div>
+              </div>
+
+              <div className="text-center p-6 bg-white rounded-xl shadow-sm">
+                <div className="text-3xl font-bold text-accent-600 mb-2">15,000+</div>
+                <div className="text-neutral-600">Books Reused</div>
+                <div className="text-sm text-neutral-500 mt-1">keeping education affordable</div>
+              </div>
+            </div>
+
+            {/* Parent Testimonials */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-xl shadow-sm">
+                <p className="italic text-neutral-700 mb-4">
+                  "I've saved over KES 15,000 this year! My children get the books they need, 
+                  and I've made friends with other parents in Westlands."
+                </p>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center">
+                    <span className="font-bold text-accent-700">MW</span>
                   </div>
-                  <h3 className="font-poppins font-semibold text-primary-800 mb-2">
-                    M-Pesa Secure Payments
-                  </h3>
-                  <p className="text-sm text-neutral-600 mb-4">
-                    Safe, familiar payments using the system you already trust
-                  </p>
-                  <div className="text-xs text-secondary-600 font-medium">
-                    ✓ Escrow Protection ✓ Verified Sellers
+                  <div>
+                    <div className="font-semibold text-primary-700">Mary Wanjiku</div>
+                    <div className="text-sm text-neutral-500">Nairobi • Mother of 3</div>
                   </div>
                 </div>
+              </div>
 
-                {/* Community Trust */}
-                <div className="text-center p-6 bg-gold-50 rounded-xl border border-gold-200">
-                  <div className="flex items-center justify-center mb-4">
-                    <div className="p-3 bg-gold-500 rounded-full">
-                      <Heart className="h-6 w-6 text-white" />
-                    </div>
+              <div className="bg-white p-6 rounded-xl shadow-sm">
+                <p className="italic text-neutral-700 mb-4">
+                  "The exchange system is brilliant! My son gets new books for each grade, 
+                  and I help other families too. It's a win-win."
+                </p>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-secondary-100 rounded-full flex items-center justify-center">
+                    <span className="font-bold text-secondary-700">SA</span>
                   </div>
-                  <h3 className="font-poppins font-semibold text-primary-800 mb-2">
-                    Community-Driven
-                  </h3>
-                  <p className="text-sm text-neutral-600 mb-4">
-                    Real parents helping real parents. No corporate middlemen.
-                  </p>
-                  <div className="text-xs text-gold-600 font-medium">
-                    ✓ Parent Reviews ✓ Local Meetups
+                  <div>
+                    <div className="font-semibold text-primary-700">Susan Achieng</div>
+                    <div className="text-sm text-neutral-500">Nakuru • Mother of 2</div>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Trust Indicators */}
+        <section className="mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* M-Pesa Security */}
+            <div className="text-center p-6 bg-white rounded-xl shadow-sm border border-secondary-200">
+              <div className="flex items-center justify-center mb-4">
+                <div className="p-3 bg-secondary-100 rounded-full">
+                  <Shield className="h-6 w-6 text-secondary-600" />
+                </div>
+              </div>
+              <h3 className="font-poppins font-semibold text-primary-800 mb-2">
+                Safe Transactions
+              </h3>
+              <p className="text-sm text-neutral-600 mb-4">
+                Meet in public places, use M-Pesa for secure payments
+              </p>
+              <div className="text-xs text-secondary-600 font-medium">
+                ✓ Verified Parents ✓ Public Meetups
+              </div>
+            </div>
+
+            {/* Facebook Community */}
+            <div className="text-center p-6 bg-white rounded-xl shadow-sm border border-blue-200">
+              <div className="flex items-center justify-center mb-4">
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <Facebook className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+              <h3 className="font-poppins font-semibold text-primary-800 mb-2">
+                Join 5,000+ Parents
+              </h3>
+              <p className="text-sm text-neutral-600 mb-4">
+                Connect on Facebook for tips and deals
+              </p>
+              <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                Join Community
+              </button>
+            </div>
+
+            {/* Local Focus */}
+            <div className="text-center p-6 bg-white rounded-xl shadow-sm border border-gold-200">
+              <div className="flex items-center justify-center mb-4">
+                <div className="p-3 bg-gold-100 rounded-full">
+                  <Heart className="h-6 w-6 text-gold-600" />
+                </div>
+              </div>
+              <h3 className="font-poppins font-semibold text-primary-800 mb-2">
+                Built for Kenya
+              </h3>
+              <p className="text-sm text-neutral-600 mb-4">
+                CBC curriculum focus, local locations, Kenyan families
+              </p>
+              <div className="text-xs text-gold-600 font-medium">
+                🇰🇪 Proudly Kenyan
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Guest Wishlist Prompt */}
+        {!currentUser && (
+          <section className="mb-12">
+            <div className="card bg-gradient-to-r from-accent-50 to-secondary-50 border-2 border-accent-200">
+              <div className="text-center">
+                <h3 className="text-xl font-poppins font-bold text-primary-800 mb-2">
+                  💡 Can't find what you need?
+                </h3>
+                <p className="text-neutral-600 mb-4">
+                  Add books to your wishlist and we'll notify you when they become available
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+                  <button className="btn-primary flex items-center space-x-2">
+                    <Heart className="h-5 w-5" />
+                    <span>Create Free Wishlist</span>
+                  </button>
+                  <p className="text-sm text-neutral-500">
+                    No registration required • Get notified instantly
+                  </p>
+                </div>
+              </div>
+            </div>
           </section>
+        )}
 
-          {/* Donation Coming Soon Section - Positioned at Bottom */}
-          <DonationComingSoon />
-        </div>
+        {/* Call to Action for Sellers */}
+        <section className="text-center">
+          <div className="card bg-gradient-to-r from-accent-500 to-secondary-500 text-white">
+            <h2 className="text-2xl font-poppins font-bold mb-4">
+              Have Books Your Child Has Outgrown?
+            </h2>
+            <p className="text-lg opacity-90 mb-6">
+              Help other parents save money while earning some cash for yourself
+            </p>
+            
+            <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
+              <button className="bg-white text-accent-600 hover:bg-neutral-100 font-bold px-8 py-4 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl">
+                List Your Books
+              </button>
+              <div className="text-sm opacity-80">
+                📱 Takes 2 minutes • 📸 Just add photos • 💰 Set your price
+              </div>
+            </div>
+
+            {/* Success Stories */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm opacity-90">
+              <div>
+                <div className="font-bold">Mary W.</div>
+                <div>Earned KES 8,500 last month</div>
+              </div>
+              <div>
+                <div className="font-bold">Paul M.</div>
+                <div>Helped 15 families save money</div>
+              </div>
+              <div>
+                <div className="font-bold">Susan A.</div>
+                <div>5-star seller rating</div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
-
-      {/* List Book Modal */}
-      <ListBookModal
-        isOpen={showListBookModal}
-        onClose={() => setShowListBookModal(false)}
-        onBookListed={handleBookListed}
-      />
-
-      {showAuthModal && (
-        <AuthFlow
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          initialMode={authMode}
-          onLogin={handleLogin}
-          onSignup={handleSignup}
-          onSocialLogin={handleSocialLogin}
-        />
-      )}
-    </>
+    </div>
   );
 };

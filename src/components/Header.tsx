@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Bell, BookOpen, Menu } from "lucide-react";
+import { Bell, BookOpen, Menu, MapPin, User } from "lucide-react";
 import { SearchBar, SearchFilters } from "./SearchBar";
 import AuthFlow from "./AuthFlow";
 import { AuthButton } from "./AuthButton";
@@ -31,30 +31,27 @@ export const Header: React.FC<HeaderProps> = ({
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [user, setUser] = useState(currentUser);
+  const [selectedLocation, setSelectedLocation] = useState("Nairobi");
+
+  const locations = ["Nairobi", "Mombasa", "Nakuru", "Kisumu", "Eldoret", "Thika"];
 
   // Listen to Firebase auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        // User is signed in
         const normalizedUser = {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || firebaseUser.email,
           email: firebaseUser.email,
           profilePicture: firebaseUser.photoURL || null,
-          role: "buyer", // default role
+          role: "buyer",
         };
         setUser(normalizedUser);
         onUserChange?.(normalizedUser);
-        
-        // Persist to localStorage for consistency
         localStorage.setItem("vitabu_user", JSON.stringify(normalizedUser));
       } else {
-        // User is signed out
         setUser(null);
         onUserChange?.(null);
-        
-        // Clear localStorage
         localStorage.removeItem("vitabu_user");
         localStorage.removeItem("vitabu_auth_token");
         localStorage.removeItem("vitabu_token_expiry");
@@ -64,42 +61,26 @@ export const Header: React.FC<HeaderProps> = ({
     return () => unsubscribe();
   }, [onUserChange]);
 
-  // Update user when prop changes
   useEffect(() => {
     setUser(currentUser);
   }, [currentUser]);
 
   const handleSearch = (query: string, filters: SearchFilters) => {
-    console.log("Header search query:", query, "Filters:", filters);
-    onSearch?.(query, filters);
+    // Add location to filters
+    const filtersWithLocation = {
+      ...filters,
+      location: selectedLocation
+    };
+    onSearch?.(query, filtersWithLocation);
   };
 
   const handleResultSelect = (book: Book) => {
-    console.log("Header selected book:", book);
     onBookSelect?.(book);
-  };
-
-  const handleAuthSuccess = (firebaseUser: any) => {
-    const normalizedUser = {
-      id: firebaseUser.uid,
-      name: firebaseUser.displayName || firebaseUser.email,
-      email: firebaseUser.email,
-      profilePicture: firebaseUser.photoURL || null,
-      role: "buyer", // optional: default role
-    };
-
-    setUser(normalizedUser);
-    onUserChange?.(normalizedUser);
-    setShowAuthModal(false);
-
-    // Persist to localStorage for page reload
-    localStorage.setItem("vitabu_user", JSON.stringify(normalizedUser));
   };
 
   const handleLogout = async () => {
     try {
       await logOut();
-      // Firebase auth state change will handle the rest
     } catch (err) {
       console.error("Logout error:", err);
     }
@@ -117,9 +98,6 @@ export const Header: React.FC<HeaderProps> = ({
   ) => {
     try {
       const userCredential = await logIn(email, password, rememberMe);
-      const user = userCredential.user;
-
-      // Firebase auth state change will handle the rest
       setShowAuthModal(false);
     } catch (error: any) {
       console.error("Login error:", error);
@@ -134,12 +112,7 @@ export const Header: React.FC<HeaderProps> = ({
   ) => {
     try {
       const userCredential = await signUp(email, password);
-      const user = userCredential.user;
-
-      // Optionally set display name
-      await updateProfile(user, { displayName: username });
-
-      // Firebase auth state change will handle the rest
+      await updateProfile(userCredential.user, { displayName: username });
       setShowAuthModal(false);
     } catch (error: any) {
       console.error("Signup error:", error);
@@ -153,10 +126,6 @@ export const Header: React.FC<HeaderProps> = ({
         provider === "google"
           ? await loginWithGoogle()
           : await loginWithFacebook();
-
-      const user = userCredential.user;
-
-      // Firebase auth state change will handle the rest
       setShowAuthModal(false);
     } catch (error: any) {
       console.error("Social login error:", error);
@@ -188,25 +157,49 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
+            {/* Location Selector - Prominent */}
+            <div className="hidden md:flex items-center space-x-2 bg-accent-50 px-4 py-2 rounded-lg border border-accent-200">
+              <MapPin className="h-5 w-5 text-accent-600" />
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="bg-transparent text-primary-700 font-medium focus:outline-none"
+              >
+                {locations.map(location => (
+                  <option key={location} value={location}>{location}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Search Bar - Hidden on mobile */}
-            <div className="hidden md:flex flex-1 max-w-2xl mx-8">
+            <div className="hidden lg:flex flex-1 max-w-xl mx-8">
               <SearchBar
                 onSearch={handleSearch}
                 onResultSelect={handleResultSelect}
                 placeholder="Search books by grade, subject, title..."
-                showFilters={true}
+                showFilters={false}
                 className="w-full"
               />
             </div>
 
             {/* Right side navigation */}
             <div className="flex items-center space-x-4">
+              {/* Guest Wishlist Indicator */}
+              {!user && (
+                <button className="relative p-2 rounded-full text-neutral-600 hover:text-primary-700 hover:bg-neutral-100">
+                  <Bell className="h-6 w-6" />
+                  <span className="absolute -top-1 -right-1 bg-accent-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    3
+                  </span>
+                </button>
+              )}
+
               {/* Mobile menu button */}
               <button className="md:hidden p-2 rounded-md text-neutral-600 hover:text-primary-700 hover:bg-neutral-100">
                 <Menu className="h-6 w-6" />
               </button>
 
-              {/* Notifications */}
+              {/* Notifications for logged-in users */}
               {user && (
                 <button className="relative p-2 rounded-full text-neutral-600 hover:text-primary-700 hover:bg-neutral-100">
                   <Bell className="h-6 w-6" />
@@ -215,23 +208,54 @@ export const Header: React.FC<HeaderProps> = ({
               )}
 
               {/* Auth Button */}
-              <AuthButton
-                currentUser={user}
-                onAuthClick={handleAuthClick}
-                onLogout={handleLogout}
-              />
+              {!user ? (
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleAuthClick("login")}
+                    className="text-neutral-600 hover:text-primary-700 font-medium px-3 py-2 rounded-lg hover:bg-neutral-100 transition-colors text-sm"
+                  >
+                    Log In
+                  </button>
+                  <button
+                    onClick={() => handleAuthClick("signup")}
+                    className="btn-primary text-sm px-4 py-2"
+                  >
+                    Sign Up
+                  </button>
+                </div>
+              ) : (
+                <AuthButton
+                  currentUser={user}
+                  onAuthClick={handleAuthClick}
+                  onLogout={handleLogout}
+                />
+              )}
             </div>
           </div>
 
-          {/* Mobile search bar */}
-          <div className="md:hidden pb-4">
+          {/* Mobile search bar and location */}
+          <div className="md:hidden pb-4 space-y-3">
             <SearchBar
               onSearch={handleSearch}
               onResultSelect={handleResultSelect}
               placeholder="Search for books..."
-              showFilters={true}
+              showFilters={false}
               className="w-full"
             />
+            
+            {/* Mobile Location Selector */}
+            <div className="flex items-center space-x-2 bg-accent-50 px-4 py-2 rounded-lg border border-accent-200">
+              <MapPin className="h-4 w-4 text-accent-600" />
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="bg-transparent text-primary-700 font-medium focus:outline-none flex-1"
+              >
+                {locations.map(location => (
+                  <option key={location} value={location}>{location}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </header>
